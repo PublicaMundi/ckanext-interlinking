@@ -1,0 +1,62 @@
+{% extends "package/resource_read.html" %}
+
+{% set resource = c.resource %}
+{% set resource_id = c.resource.id %}
+{% set name_or_id = c.package.id %}
+{% set pkg_dict = c.package %}
+{% set languages = h.get_resource_languages(resource) %}
+{% set language = c.resource_language %}
+
+{% block breadcrumb_content %}
+    {% if pkg_dict %}
+    {% set dataset = pkg_dict.title or pkg_dict.name %}
+    {% if pkg_dict.organization %}
+      {% set organization = pkg_dict.organization.title or pkg_dict.organization.name %}
+      <li>{% link_for _('Organizations'), controller='organization', action='index' %}</li>
+      <li>{% link_for organization|truncate(30), controller='organization', action='read', id=pkg_dict.organization.name %}</li>
+      <li>{% link_for dataset|truncate(30), controller='package', action='read', id=pkg.id %}
+      <li>{% link_for h.resource_display_name(resource)|truncate(30), controller='package', action='resource_read', id=pkg.id, resource_id=resource_id %}
+      <li class="active"><a href="{{ h.full_current_url()}}">{{_('Interlinking')|truncate(30) }}</a></li> 
+    {% else %}
+      <li>{% link_for _('Datasets'), controller='package', action='search' %}</li>
+    {% endif %}
+  {% else %}
+    <li>{% link_for _('Datasets'), controller='package', action='search' %}</li>
+    <li class="active"><a href="">{{ _('Create Dataset') }}</a></li>
+  {% endif %}
+
+  {# <li class="active"><a href="">{{ _('Translation') }}</a></li> #}
+{% endblock %}
+
+{% block resource_languages %}
+{{ _('Interlinking resource') }}
+{% endblock %}
+{% block pre_primary %}
+    {% block resource %}
+    <section class="module module-resource">
+      <div class="module-content">
+        <div class="actions">
+          {% block resource_actions %}
+          <ul>
+            {% block resource_actions_inner %}
+            <li>{% link_for _('View resource'), controller='package', action='resource_read', id=name_or_id, resource_id=resource.id, class_='btn', icon='eye-open', locale=language %}</li>
+            <li>{% link_for _('Edit'), controller='package', action='resource_edit', id=pkg.name, resource_id=res.id, class_='btn', icon='edit' %}</li>
+            {% endblock %}
+          </ul>
+          {% endblock %}
+        </div>
+        {% block resource_content %}
+        {{ super() }}
+        {% endblock %}
+
+        <iframe src="{{ h.url_for(controller='ckanext.interlinking.controllers.package:UserController', action='resource_datapreview', resource_id=resource_id, id=name_or_id) }}" frameborder="0" width="100%"  data-module="data-viewer">
+        <p>{{ _('Your browser does not support iframes.') }}</p>
+        </iframe>
+    </div>
+   </div>
+   </section>
+  {% endblock %}
+{% endblock %}
+
+
+  

@@ -1,0 +1,51 @@
+body {
+  background-color: #fff;
+}
+
+.recline-data-explorer{
+  position: relative;
+  overflow: auto;
+}
+
+.loading-dialog {
+  width: 120px;
+}
+
+.recline-slickgrid {
+  height: 600px;
+}
+
+.recline-timeline .vmm-timeline {
+  height: 600px;
+}
+
+.loading-spinner {
+  float: right;
+  background-image: url('../img/ajaxload-circle.gif');
+  width: 32px;
+  height: 32px;
+}
+            
+.divDemoBody  {
+    width: 60%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 100px;
+}
+   
+.divDemoBody p {
+    font-size: 18px;
+    line-height: 140%;
+    padding-top: 12px;
+}
+
+.divDialogElements input {
+    font-size: 18px;
+    padding: 3px; 
+    height: 32px; 
+    width: 500px; 
+}
+
+.divButton {
+    padding-top: 12px;
+}
