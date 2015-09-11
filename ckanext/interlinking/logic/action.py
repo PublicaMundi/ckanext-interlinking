@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import logging
 import os
 import shlex
@@ -12,6 +15,7 @@ import ckan.lib.navl.dictization_functions
 import ckan.logic as logic
 import ckan.plugins as p
 import ckanext.interlinking.logic.schema as dsschema
+import ckanext.interlinking.logic.solr_access as solr_access
 
 import uuid
 #from ckan.lib.celery_app import celery
@@ -35,6 +39,7 @@ def interlinking_resource_create(context, data_dict):
     the original resource whose id is provided
 
     '''
+
     p.toolkit.check_access('interlinking_resource_create', context, data_dict)
 
     schema = context.get('schema', dsschema.interlinking_resource_create_schema())
@@ -44,21 +49,20 @@ def interlinking_resource_create(context, data_dict):
 
     #package = p.toolkit.get_action('dataset_show')(context, {'id': data_dict.get('package_id')})
     res = p.toolkit.get_action('resource_show')(context, {'id': data_dict.get('resource_id')})
-    print data_dict
-    print res
     #try:
     # Check if datastore table exists
     ds = p.toolkit.get_action('datastore_search')(context, {'resource_id': data_dict.get('resource_id')})
+    
+    
     #except p.toolkit.ObjectNotFound:
     #    log.info('Resource {0} does not have a datastore table associated with it'.format(data_dict.get('id')))
     #    return
-    being_interlinked_with = res.get('being_interlinked_with')
-    #has_translations = json.loads(res.get('has_translations','{}'))
-    #orig_language = res.get('resource_language', 'en')
-    #if orig_language == data_dict.get('language'):
-    #    raise p.toolkit.ValidationError('Cannot translate resource {0} in origin language {1}'.format(data_dict.get('id'),data_dict.get('language')))
-    if being_interlinked_with:
-        log.info('Resource {0} is already being interlinked'.format(data_dict.get('id')))
+    on_interlinking_process = res.get('on_interlinking_process')  
+
+    
+    if on_interlinking_process:
+        log.info('Resource {0} is already subject to an ongoing interlinking process. In order to start a new,' 
+                 'the current one must be completed.'.format(data_dict.get('id')))
         raise p.toolkit.ValidationError('Interlinking resource already exists')
 
     ### TODO: resource_show doesnt display package_id until CKAN 2.3
@@ -76,12 +80,12 @@ def interlinking_resource_create(context, data_dict):
     for field in fields:
         col = {field.get('id')}
         if field.get('type') != 'text':
-            columns_status.update({field.get('id'):'no-interlinking'})
+            columns_status.update({field.get('id'):'non-interlinked'})
         else:
             columns_status.update({field.get('id'):''})
 
     columns_status = json.dumps(columns_status)
-
+    
     new_res = p.toolkit.get_action('resource_create')(context,
             {
                 'package_id': data_dict.get('package_id'),
@@ -91,23 +95,25 @@ def interlinking_resource_create(context, data_dict):
                 'description': 'This is a resource created for interlinking purposes',
                 'interlinking_parent_id': data_dict.get('resource_id'),
                 'interlinking_resource': True,
-                'interlinking_status': 'draft',
-                'state': 'active',
+                'interlinking_status': 'draft', #TOCHECK: Is it needed?
+                'state': 'active',              
                 'interlinking_columns_status':columns_status,
                 'interlinking_columns': '{}',
             })
-
+       
+     
     # Update original resource metadata
-    #has_translations.update({data_dict.get('language'):new_res.get('id')})
-    being_interlinked_with = new_res.get('id')
+    temp_interlinking_resource = new_res.get('id')
     res = p.toolkit.get_action('resource_update')(context,
             {
                 'id':res.get('id'),
-                'being_interlinked_with': being_interlinked_with,
+                'temp_interlinking_resource': temp_interlinking_resource,
+                'on_interlinking_process': True,
                 'format': res.get('format'),
                 'url': res.get('url')
                 }
             )
+     
 
     # Initialize empty datastore table associated to resource
     new_ds = p.toolkit.get_action('datastore_create')(context,
@@ -115,18 +121,20 @@ def interlinking_resource_create(context, data_dict):
                 'resource_id': new_res.get('id'),
                 'force':True,
             })
-
+    
     return new_res
+    
+
 
 def interlinking_resource_update(context, data_dict):
-    '''Update or insert column given the (translation) resource_id, column_name
-    and translation method(manual, automatic, transcription
+    '''Update or insert column given the resource_id, column_name
+    and interlinking reference resource
 
     '''
     p.toolkit.check_access('interlinking_resource_update', context, data_dict)
 
     schema = context.get('schema', dsschema.interlinking_resource_update_schema())
-    print 'Updating...'
+    print '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>data_dict<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
     print data_dict
     #records = data_dict.pop('records', None)
     data_dict, errors = _validate(data_dict, schema, context)
@@ -134,19 +142,24 @@ def interlinking_resource_update(context, data_dict):
     #    data_dict['records'] = records
     if errors:
         raise p.toolkit.ValidationError(errors)
-    print 'after validate'
 
     res = p.toolkit.get_action('resource_show')(context, {'id': data_dict.get('resource_id')})
-    print 'after show'
+    print '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>res<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
+    print res
+    
     # Check if candidate resource is translation resource
     if not res.get('interlinking_resource'):
         raise p.toolkit.ValidationError('Resource "{0}" is not an interlinking resource'.format(res.get('id')))
-
+    
     original_res = p.toolkit.get_action('resource_show')(context, {'id': res.get('interlinking_parent_id')})
 
     ds = p.toolkit.get_action('datastore_search')(context, {'resource_id': data_dict.get('resource_id')})
     original_ds = p.toolkit.get_action('datastore_search')(context, {'resource_id': res.get('interlinking_parent_id')})
 
+    print '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>original_ds<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
+    pprint.pprint( original_ds)
+    print '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>ds<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
+    pprint.pprint( ds)
     # Check if column_name exists in original table
     col_name = data_dict.get('column_name')
     field_exists = False
@@ -157,16 +170,19 @@ def interlinking_resource_update(context, data_dict):
     if not field_exists:
         raise p.toolkit.ValidationError('Column name "{0}" does not correspond to any "{1}" table columns'.format(data_dict.get('column_name'),res.get('interlinking_parent_id')))
 
-
-    mode = data_dict.get('mode')
+    
 
     ## 
     ##  Interlinking logic goes here
     ##
 
-    _initialize_column(context, col_name, ds, original_ds.get('total'))
-    if mode == 'manual':
-        return _translate_manual(context, res, col_name, original_ds, ds)
+    #_initialize_column(context, col_name, ds, original_ds.get('total'))
+    #return solr.
+    
+    _interlink_column(context, res, col_name, original_ds, ds, 'cities2')
+    
+    #if mode == 'manual':
+    #    return _translate_manual(context, res, col_name, original_ds, ds)
     #elif mode == 'automatic':
     #    return _translate_automatic(context, res, ds)
     #elif mode == 'transcription':
@@ -174,7 +190,7 @@ def interlinking_resource_update(context, data_dict):
     #else:
     #    log.info('Should never reach here')
     #    return
-
+    
     return
 
 def interlinking_resource_delete(context, data_dict):
@@ -321,17 +337,15 @@ def interlinking_resource_unpublish(context, data_dict):
         })
     return
 
-def _translate_automatic(context, res, data_dict, ds_dict):
-    pass
-
-def _translate_manual(context, res, col_name, original_ds, new_ds):
-    # Just update total number of values with None in case overriding
+def _interlink_column(context, res, col_name, original_ds, new_ds, reference):
+    print '________________________________________________________________'
+    print col_name
+    res_id = original_ds.get('resource_id')
     total = original_ds.get('total')
-    columns = json.loads(res.get('interlinking_columns_status','{}'))
+    columns = json.loads(res.get('interlinked_with','{}'))
     for k,v in columns.iteritems():
         if k == col_name:
-            columns.update({k:'manual'})
-
+            columns.update({k:reference})
     columns = json.dumps(columns)
     res = p.toolkit.get_action('resource_update')(context, {
             'id': res.get('id'),
@@ -339,21 +353,34 @@ def _translate_manual(context, res, col_name, original_ds, new_ds):
             'format': res.get('format'),
             'interlinking_parent_id': res.get('interlinking_parent_id'),
             'interlinking_resource': True,
-            'interlinking_status': res.get('interlinking_status'),
+            'translation_status': res.get('translation_status'),
             'interlinking_columns_status':columns,
             'interlinking_columns':res.get('interlinking_columns'),
-            'state': 'active',
             })
-    print 'BEFORE VALI ERRO'
-    return p.toolkit.get_action('datastore_upsert')(context,
-            {
-                'resource_id': new_ds.get('resource_id'),
-                'force': True,
-                'method':'upsert',
-                'allow_update_with_id':True,
-                'records': [{'_id':i, col_name:''} for i in range(1,total+1)]
-            })
+    
+    STEP = 100
+    offset = 0
+    
+    
+    for k in range(1,total/STEP+2):
+        recs = p.toolkit.get_action('datastore_search')(context, {'resource_id':res_id, 'offset': offset, 'sort':'_id'}).get('records')
+        nrecs = []
+        for rec in recs:
+            original_term = rec.get(col_name)
+            print '-----------------------------------------------------------------'
+            print original_term.encode('utf8')
+            suggestions = solr_access.spell_search(original_term, reference)
+            for s in suggestions:
+                print s.encode('utf8')
 
+    """
+    term = u'Μέγαρ'
+    suggestions = solr_access.spell_search(term,  reference) 
+    for s in suggestions:
+        print s.encode('utf8')
+    """
+    
+    
 
 def _transcript(context, res, col_name, original_ds, new_ds):
     # TODO: Need to json serialize context and data_dict
@@ -422,20 +449,21 @@ def _delete_column(context, col_name, ds, total):
             })
 
 def _initialize_column(context, col_name, ds, total):
-    print 'initializing column..'
+    
     fields = ds.get('fields')
     # Remove _id from fields list
     fields.pop(0)
     for field in fields:
         if col_name == field.get('id'):
             return
-
+    
     # Build fields list
     new_column = {'id': col_name,
                 'type': 'text'}
     fields.append(new_column)
-    print 'before datastore create'
+    
     # Update fields with datastore_create
+    
     new_ds = p.toolkit.get_action('datastore_create')(context,
             {
                 'resource_id': ds.get('resource_id'),
@@ -444,7 +472,7 @@ def _initialize_column(context, col_name, ds, total):
                 'fields': fields
                 #'records':[{col_name:''}]
                 })
-    print 'new ds'
+    
     return
     # And update with correct number of records
     #return p.toolkit.get_action('datastore_upsert')(context,

@@ -77,8 +77,7 @@ def interlinking_resource_update_schema():
         'resource_id': [not_missing, not_empty, unicode],
         'column_name': [not_missing, not_empty, unicode],
         'force': [ignore_missing, boolean_validator],
-        'mode': [not_missing, unicode, OneOf(
-            ['automatic', 'manual', 'transcription', 'title'])],
+        'reference_resource': [not_missing, not_empty, unicode],
         '__junk': [empty],
         '__before': [rename('id', 'resource_id')]
     }
