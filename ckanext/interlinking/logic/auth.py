@@ -29,7 +29,7 @@ def interlinking_resource_update(context, data_dict):
 def interlinking_resource_delete(context, data_dict):
     return interlinking_resource_auth(context, data_dict, privilege='resource_delete')
 
-def interlinking_resource_publish(context, data_dict):
+def interlinking_resource_finalize(context, data_dict):
     return interlinking_resource_auth(context, data_dict)
 
 

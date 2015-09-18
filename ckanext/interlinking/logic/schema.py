@@ -93,7 +93,7 @@ def interlinking_resource_delete_schema():
     }
     return schema
 
-def interlinking_resource_publish_schema():
+def interlinking_resource_finalize_schema():
     schema = {
         'resource_id': [not_missing, not_empty, unicode, resource_id_exists],
         '__junk': [empty],

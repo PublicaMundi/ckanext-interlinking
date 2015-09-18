@@ -102,7 +102,7 @@ class ReclinePreviewInterlinking(p.SingletonPlugin):
                 'interlinking_resource_create': action.interlinking_resource_create,
                 'interlinking_resource_update': action.interlinking_resource_update,
                 'interlinking_resource_delete': action.interlinking_resource_delete,
-                'interlinking_resource_publish': action.interlinking_resource_publish,
+                'interlinking_resource_finalize': action.interlinking_resource_finalize,
                 }
 
     def _get_context(self):
@@ -164,5 +164,5 @@ class ReclinePreviewInterlinking(p.SingletonPlugin):
                 'interlinking_resource_create': auth.interlinking_resource_create,
                 'interlinking_resource_update': auth.interlinking_resource_update,
                 'interlinking_resource_delete': auth.interlinking_resource_delete,
-                'interlinking_resource_publish': auth.interlinking_resource_publish,
+                'interlinking_resource_finalize': auth.interlinking_resource_finalize,
                 }
