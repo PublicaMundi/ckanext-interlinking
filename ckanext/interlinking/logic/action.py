@@ -75,7 +75,7 @@ def interlinking_resource_create(context, data_dict):
             columns_status.update({field.get('id'):'not-interlinked'})
 
     columns_status = json.dumps(columns_status)
-    
+
     new_res = p.toolkit.get_action('resource_create')(context,
             {
                 'package_id': data_dict.get('package_id'),
@@ -110,7 +110,7 @@ def interlinking_resource_create(context, data_dict):
                 'resource_id': new_res.get('id'),
                 'force':True,
             })
-
+    
     return new_res
     
 
@@ -159,7 +159,7 @@ def interlinking_resource_update(context, data_dict):
         raise p.toolkit.ValidationError('Column name "{0}" cannot be interlinked'.format(col_name))
        
 
-    _initialize_column(context, col_name, ds, original_ds.get('total'))
+    _initialize_columns(context, col_name, ds, original_ds.get('total'))
     _interlink_column(context, res, col_name, original_ds, ds, reference_resource)
     return
 
@@ -260,74 +260,43 @@ def interlinking_resource_finalize(context, data_dict):
         raise p.toolkit.ValidationError('Resource "{0}" is not currently being interlinked resource'.format(res.get('id')))
     
     # Copying records from the temporary interlinking resource to the original one
-    pprint.pprint(res)
     temp_interlinking_resource = res.get('temp_interlinking_resource')
-    print original_resource, temp_interlinking_resource
        
-    """
-    print '>>>>>>>>>>>>>>>>>>>>>>>>>>>ORIGINAL>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
-    pprint.pprint(original_ds)
-    print '>>>>>>>>>>>>>>>>>>>>>>>>>>>INTERLINKED>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
-    pprint.pprint(temp_int_ds)
-    """
     STEP = 100
     offset = 0
     original_ds = p.toolkit.get_action('datastore_search')(context, {'resource_id':original_resource, 'offset': offset, 'sort':'_id'})
     temp_int_ds = p.toolkit.get_action('datastore_search')(context, {'resource_id':temp_interlinking_resource, 'offset': offset, 'sort':'_id'})
     total = original_ds.get('total')
     
+    #Picking the interlinked columns
+    columns = json.loads(p.toolkit.get_action('resource_show')(context, {'id': temp_interlinking_resource}).get('interlinking_columns_status'))
+    interlinked_columns = []
+    for col, status in columns.items():
+        if col == '_id' or status != 'not-interlinkable' and status != 'not-interlinked':
+            interlinked_columns.append(col)
+
+    # Update original resource's values
     for k in range(1, total/STEP+2):
-        recs = p.toolkit.get_action('datastore_search')(context, {'resource_id':original_resource, 'offset': offset, 'sort':'_id'}).get('records')
-        for rec in recs:
-            filter = {'_id':rec.get('_id')}
-            int_rec = p.toolkit.get_action('datastore_search')(context, {'resource_id':temp_interlinking_resource, 'filter':filter})
-            pprint.pprint(filter)
-            pprint.pprint(int_rec)
+        recs = p.toolkit.get_action('datastore_search')(context, {'resource_id':temp_interlinking_resource, 
+                                                                  'fields':interlinked_columns, 
+                                                                  'offset': offset, 
+                                                                  'sort':'_id'}).get('records')
                 
-    
-    """ 
-    
-    for k in range(1,total/STEP+2):
-        recs = p.toolkit.get_action('datastore_search')(context, {'resource_id':res_id, 'offset': offset, 'sort':'_id'}).get('records')
-        nrecs = []
-        for rec in recs:
-            original_term = rec.get(col_name)
-            suggestions = solr_access.spell_search(original_term, reference)
-            #pprint.pprint(suggestions)
-            #for s in suggestions:
-            #    print s.encode('utf8')
-            suggestions_str = ','.join(suggestions)
-            nrec = {'_id':rec.get('_id'),col_name:suggestions_str}
-            nrecs.append(nrec)
-             
-        ds = p.toolkit.get_action('datastore_upsert')(context,
+        updated_ds = p.toolkit.get_action('datastore_upsert')(context,
                 {
-                    'resource_id': new_ds.get('resource_id'),
+                    'resource_id': original_resource,
                     'allow_update_with_id':True,
                     'force': True,
-                    'records': nrecs
+                    'records': recs
                     })
-                
         offset=offset+STEP
-    """
+    
+    # Delete temporary interlinking resource and corresponding datastore table and mark original 
+    # resource as "not being under interlinking process"
+    return p.toolkit.get_action('interlinking_resource_delete')(context, {'resource_id': temp_interlinking_resource})
+        
 
-    # Update resource metadata
-    """
-    p.toolkit.get_action('resource_update')(context, {
-        'id':res.get('id'),
-        'url':res.get('url'),
-        'format':res.get('format'),
-        'interlinking_parent_id': res.get('interlinking_parent_id'),
-        'interlinking_resource': True,
-        'interlinking_language': res.get('interlinking_language'),
-        'interlinking_status': 'published',
-        'interlinking_columns': res.get('interlinking_columns'),
-        })
-    """
-    return
-
-
-def _initialize_column(context, col_name, ds, total):
+def _initialize_columns(context, col_name, ds, total):
     fields = ds.get('fields')
     
     # Remove _id from fields list
@@ -336,10 +305,14 @@ def _initialize_column(context, col_name, ds, total):
         if col_name == field.get('id'):
             return
     
-    # Build fields list
-    new_column = {'id': col_name,
+    # Build main column. It keeps the best result or the user's choice
+    main_column = {'id': col_name,
                 'type': 'text'}
-    fields.append(new_column)
+    fields.append(main_column)
+    # Build score column. It keeps the score of the main column's interlinking term
+    #score_column = {'id', col_name+ '-score',
+    #             'type', }
+    
     
     # Update fields with datastore_create
     new_ds = p.toolkit.get_action('datastore_create')(context,
@@ -392,7 +365,7 @@ def _interlink_column(context, res, col_name, original_ds, new_ds, reference):
             #for s in suggestions:
             #    print s.encode('utf8')
             suggestions_str = ','.join(suggestions)
-            nrec = {'_id':rec.get('_id'),col_name:suggestions_str}
+            nrec = {'_id':rec.get('_id'), col_name:suggestions_str}
             nrecs.append(nrec)
              
         ds = p.toolkit.get_action('datastore_upsert')(context,
