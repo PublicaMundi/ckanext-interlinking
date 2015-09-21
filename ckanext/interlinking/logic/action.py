@@ -11,6 +11,7 @@ import json
 import pprint
 
 from unidecode import unidecode
+from random import uniform
 import ckan.lib.navl.dictization_functions
 import ckan.logic as logic
 import ckan.plugins as p
@@ -151,14 +152,12 @@ def interlinking_resource_update(context, data_dict):
     if not field_exists:
         raise p.toolkit.ValidationError('Column name "{0}" does not correspond to any "{1}" table columns'.format(data_dict.get('column_name'),res.get('interlinking_parent_id')))
     
-    
     #Check if the column is not-interlinkable
     columns = json.loads(res.get('interlinking_columns_status','{}'))
     pprint.pprint(columns)
     if columns[col_name] == 'not-interlinkable':
         raise p.toolkit.ValidationError('Column name "{0}" cannot be interlinked'.format(col_name))
        
-
     _initialize_columns(context, col_name, ds, original_ds.get('total'))
     _interlink_column(context, res, col_name, original_ds, ds, reference_resource)
     return
@@ -216,7 +215,7 @@ def interlinking_resource_delete(context, data_dict):
                 'interlinking_columns':res.get('interlinking_columns'),
                 })
 
-        filters = {col_name:'*'}
+        filters = {col_name:'*', col_name+'-score':'*', col_name+'-results':'*'}
         return p.toolkit.get_action('datastore_delete')(context, {'resource_id': data_dict.get('resource_id'), 'filters':filters, 'force':True})
 
     # Delete datastore table
@@ -265,10 +264,9 @@ def interlinking_resource_finalize(context, data_dict):
     STEP = 100
     offset = 0
     original_ds = p.toolkit.get_action('datastore_search')(context, {'resource_id':original_resource, 'offset': offset, 'sort':'_id'})
-    temp_int_ds = p.toolkit.get_action('datastore_search')(context, {'resource_id':temp_interlinking_resource, 'offset': offset, 'sort':'_id'})
     total = original_ds.get('total')
     
-    #Picking the interlinked columns
+    #Picking the interlinked columns plus the '_id' one
     columns = json.loads(p.toolkit.get_action('resource_show')(context, {'id': temp_interlinking_resource}).get('interlinking_columns_status'))
     interlinked_columns = []
     for col, status in columns.items():
@@ -298,21 +296,23 @@ def interlinking_resource_finalize(context, data_dict):
 
 def _initialize_columns(context, col_name, ds, total):
     fields = ds.get('fields')
-    
     # Remove _id from fields list
     fields.pop(0)
     for field in fields:
         if col_name == field.get('id'):
             return
-    
     # Build main column. It keeps the best result or the user's choice
     main_column = {'id': col_name,
                 'type': 'text'}
     fields.append(main_column)
     # Build score column. It keeps the score of the main column's interlinking term
-    #score_column = {'id', col_name+ '-score',
-    #             'type', }
-    
+    score_column = {'id': col_name + '-score',
+                 'type': 'numeric'}
+    fields.append(score_column)
+    # Build results column. It keeps all the returned results and their respective scores as a json object.
+    results_column = {'id': col_name + '-results',
+                 'type': 'text'}
+    fields.append(results_column)
     
     # Update fields with datastore_create
     new_ds = p.toolkit.get_action('datastore_create')(context,
@@ -360,12 +360,32 @@ def _interlink_column(context, res, col_name, original_ds, new_ds, reference):
         nrecs = []
         for rec in recs:
             original_term = rec.get(col_name)
-            suggestions = solr_access.spell_search(original_term, reference)
-            #pprint.pprint(suggestions)
-            #for s in suggestions:
-            #    print s.encode('utf8')
-            suggestions_str = ','.join(suggestions)
-            nrec = {'_id':rec.get('_id'), col_name:suggestions_str}
+            terms = solr_access.spell_search(original_term, reference)
+            print 'original_term>>>', original_term.encode('utf-8')
+            pprint.pprint(terms)
+            
+            suggestions = []
+            best_suggestion = {'term':'', 'score':0}
+            
+            ### This piece of code is only temporary!!!
+            for term in terms:
+                score = uniform(0,1)
+                suggestion = {'term': term, 'score': score}
+                suggestions.append(suggestion)
+            ###
+                
+                # Picking best suggestion
+                if len(suggestions) > 0:
+                    best_suggestion = suggestions[0]
+                    for suggestion in suggestions:
+                        if suggestion['score'] > best_suggestion['score']:
+                            best_suggestion = suggestion
+            
+                
+            nrec = {'_id':rec.get('_id'), 
+                    col_name: best_suggestion['term'], 
+                    col_name+'-score': best_suggestion['score'],
+                    col_name+'-results': json.dumps(suggestions)}
             nrecs.append(nrec)
              
         ds = p.toolkit.get_action('datastore_upsert')(context,
