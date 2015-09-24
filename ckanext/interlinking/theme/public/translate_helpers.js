@@ -4,7 +4,7 @@
 //this.TranslateApiHelper = this.TranslateApiHelper || {};
 
 //(function ($, my) {
-function TranslateHelper (resource){
+function InterlinkHelper (resource){
     this.resource;
     this.initialize = function (resource) {
         this.resource = resource;
@@ -22,24 +22,21 @@ function TranslateHelper (resource){
     };
 
     this.update = function(options, ld, cb) {
-        var title_trans = title_trans || null;
         var options = options || {};
-        var col_name = options.column;
-        var mode = options.mode; 
-        var title_trans = options.title;
+        var col_name = options.column_name;
+        var reference_resource = options.reference_resource;
         var self = this;
         var url = resource.endpoint + '/3/action/interlinking_resource_update';
+                
         
-        var translations = {};
+        var new_res_id = resource.temp_interlinking_resource;
         
-        
-        var new_res_id = resource.being_interlinked_with;
-        
+        //TOCHECK: Is res needed?
         var res = {endpoint:resource.endpoint, id:new_res_id};
         var options = {
                     resource_id: new_res_id,
                     column_name: col_name,
-                    mode: mode,
+                    reference_resource: mode,
                 }
         return this.call_ajax(url, options, ld, cb);           
     }; 
@@ -55,43 +52,30 @@ function TranslateHelper (resource){
         var new_res_id = resource.being_interlinked_with;
         
         if (col_name !== undefined){
-        
-        var options = {
-            resource_id: new_res_id,
-            column_name: col_name
-        }
-        
+	        var options = {
+	            resource_id: new_res_id,
+	            column_name: col_name
+	        }
         }
         else{
             var options = {
                 resource_id: new_res_id
             }
-        
         }
         return self.call_ajax(url, options, ld, cb);    
     };
 
-    this.publish = function(options, ld, cb) {
-        var url = resource.endpoint + '/3/action/interlinking_resource_publish';
+    this.finalize = function(options, ld, cb) {
+        var url = resource.endpoint + '/3/action/interlinking_resource_finalize';
         
-        var new_res_id = resource.being_interlinked_with;
+        var res_id = resource.id;
 
         var options = {
-            resource_id:new_res_id,
+            resource_id:res_id,
         }
         return this.call_ajax(url, options, ld, cb);    
     };
 
-    this.unpublish = function(options, ld, cb) {
-        var url = resource.endpoint + '/3/action/interlinking_resource_unpublish';
-        
-        var new_res_id = resource.being_interlinked_with;
-
-        var options = {
-            resource_id:new_res_id,
-        }
-        return this.call_ajax(url, options, ld, cb);    
-    };
 
     this.show =  function(resource, cb) {
 
@@ -112,10 +96,13 @@ function TranslateHelper (resource){
 
     this.show_resource =  function(resource, cb) {
 
-        var url = resource.endpoint + '/3/action/resource_show';
+    	var url = resource.endpoint + '/3/action/resource_show';
         var options = {
             id: resource.id,
         }
+        console.log('options')
+        console.log(options)
+        
         return $.ajax({
                 type: "POST",
                 url: url,
@@ -154,18 +141,15 @@ function TranslateHelper (resource){
         });
     };
     this._strip_package_id = function(url) {
-        // CKAN 2.2 doesnt provide package_id in resource_show
+        // CKAN 2.2 doesn't provide package_id in resource_show
         // strip it from url
         var str = "dataset/";
-        var start = url.indexOf(str)+str.length;
+        var start = url.indexOf(str) + str.length;
         var str = "/resource";
         var end = url.indexOf(str);
         return url.substring(start, end);
 
     };
-    
-
-
 };
 
 

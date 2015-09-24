@@ -40,7 +40,6 @@ def interlinking_resource_create(context, data_dict):
     the original resource whose id is provided
 
     '''
-    
     p.toolkit.check_access('interlinking_resource_create', context, data_dict)
     schema = context.get('schema', dsschema.interlinking_resource_create_schema())
     data_dict, errors = _validate(data_dict, schema, context)
@@ -49,9 +48,8 @@ def interlinking_resource_create(context, data_dict):
 
     res = p.toolkit.get_action('resource_show')(context, {'id': data_dict.get('resource_id')})
     ds = p.toolkit.get_action('datastore_search')(context, {'resource_id': data_dict.get('resource_id')})    
-    on_interlinking_process = res.get('on_interlinking_process')  
-    print 'on_interlinking_process: ', on_interlinking_process
-    if on_interlinking_process == True:
+    on_interlinking_process = res.get('on_interlinking_process')
+    if on_interlinking_process == 'True':
         log.info('Resource {0} is already subject to an ongoing interlinking process. In order to start a new,' 
                  'the current one must be completed.'.format(data_dict.get('id')))
         raise p.toolkit.ValidationError('Interlinking resource already exists')
@@ -154,7 +152,6 @@ def interlinking_resource_update(context, data_dict):
     
     #Check if the column is not-interlinkable
     columns = json.loads(res.get('interlinking_columns_status','{}'))
-    pprint.pprint(columns)
     if columns[col_name] == 'not-interlinkable':
         raise p.toolkit.ValidationError('Column name "{0}" cannot be interlinked'.format(col_name))
        
@@ -203,6 +200,12 @@ def interlinking_resource_delete(context, data_dict):
                 columns.update({k:'not-interlinked'})
         columns = json.dumps(columns)
         
+        ## new way updating resource
+        res = p.toolkit.get_action('resource_show')(context)
+        res['interlinking_columns_status'] = columns
+        res = p.toolkit.get_action('resource_update')(context, res)
+        
+        """
         res = p.toolkit.get_action('resource_update')(context, {
                 'id': res.get('id'),
                 'url': res.get('url'),
@@ -214,7 +217,7 @@ def interlinking_resource_delete(context, data_dict):
                 'interlinking_columns_status':columns,
                 'interlinking_columns':res.get('interlinking_columns'),
                 })
-
+        """
         filters = {col_name:'*', col_name+'-score':'*', col_name+'-results':'*'}
         return p.toolkit.get_action('datastore_delete')(context, {'resource_id': data_dict.get('resource_id'), 'filters':filters, 'force':True})
 
@@ -327,21 +330,15 @@ def _initialize_columns(context, col_name, ds, total):
 
 
 def _interlink_column(context, res, col_name, original_ds, new_ds, reference):
-    pprint.pprint(res)
     res_id = original_ds.get('resource_id')
-    print 'res_id', res_id
     total = original_ds.get('total')
-    print 'total: ', total
-    print 'reference: ', reference
     columns = json.loads(res.get('interlinking_columns_status','{}'))
-    pprint.pprint(columns)
     
     # The interlinked column is marked with the reference resource with which it is interlinked.
     for k,v in columns.iteritems():
         if k == col_name:
             columns.update({k:reference})
     columns = json.dumps(columns)
-    pprint.pprint(columns)
     res = p.toolkit.get_action('resource_update')(context, {
             'id': res.get('id'),
             'url': res.get('url'),
@@ -361,8 +358,6 @@ def _interlink_column(context, res, col_name, original_ds, new_ds, reference):
         for rec in recs:
             original_term = rec.get(col_name)
             terms = solr_access.spell_search(original_term, reference)
-            print 'original_term>>>', original_term.encode('utf-8')
-            pprint.pprint(terms)
             
             suggestions = []
             best_suggestion = {'term':'', 'score':0}
@@ -398,6 +393,3 @@ def _interlink_column(context, res, col_name, original_ds, new_ds, reference):
                 
         offset=offset+STEP
     return new_ds
-    
-        
-

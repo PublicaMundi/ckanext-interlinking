@@ -40,76 +40,75 @@ if (isNodeModule) {
   my.Client.prototype.datastoreQuery = function(queryObj, cb) {
     var actualQuery = my._normalizeQuery(queryObj);
     var self = this;
-    this.action('datastore_search', actualQuery, function(err, results) {
+    
+    this.action('datastore_search', actualQuery, function(err, original_res_results) {
       if (err) {
         cb(err);
         return;
       }
-      var transQuery = {
+      var interlinkingQuery = {
           limit: actualQuery.limit,
           offset: actualQuery.offset,
           sort: actualQuery.sort,
           resource_id: queryObj.interlinking_resource,
       }
       
-      self.action('datastore_search', transQuery, function(err2, results2) {
-        if (err2) {
+      self.action('datastore_search', interlinkingQuery, function(err2, interlink_res_results) {
+          if (err2) {
             cb(err2);
             return;
-        }
-      // map ckan types to our usual types ...
-      var fields = _.map(results.result.fields, function(field) {
-        field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
-        //field.state = field.state in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.state] : field.state;
-        return field;
-      });
-     var fields2 = _.map(results2.result.fields, function(field) {
-        field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
-        //field.state = field.state in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.state] : field.state;
-        return field;
-      });
-        var records = [];
-        new_fields = []
-        fields_temp = fields2.slice(0);
-        fields.forEach(function(fld, idx1){
-            new_fields.push(fld);
-            fields_temp.forEach(function(fld2, idx2){
-                var extra = fld2.id+'-il';
-                if (fld.id == fld2.id && fld.id !== '_id'){
-                var new_fld = {
-                            'id': extra,
-                            'type': 'text'
-                        };
-                    new_fields.push(new_fld);
-                }
-            });
-        });
-        console.log( 'lang!!!');
-        console.log(queryObj.translation_language);
-          
-        results.result.records.forEach(function(rc, idx){
-            fields2.forEach(function(fld2, idx2) {
-            var extra = fld2.id+'-'+queryObj.translation_language;
-                    if (fld2['id'] !== '_id'){
-                        //console.log(fld2);
-                        //console.log(results2);
-                        var val = results2.result.records[idx][fld2['id']];
-                        //console.log(val);
-                        rc[extra] = val; 
-                    }
-                });
-                records.push(rc);
-        });
-        console.log('OUT');
-        console.log(out);
-        var out = {
-            total: results.result.total,
-            fields: new_fields,
-            hits: records
-            };
-        
+          }
 
-      cb(null, out);
+	      // map ckan types to our usual types ...
+	      var original_res_fields = _.map(original_res_results.result.fields, function(field) {
+	        field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
+	        return field;
+	      });
+	      var interlink_res_fields = _.map(interlink_res_results.result.fields, function(field) {
+	        field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
+	        return field;
+	      });
+
+	        var records = [];
+	        new_fields = []
+	        fields_temp = interlink_res_fields.slice(0);
+
+	        // For each original field, add it to final fields, and if you find an 
+	        // interlinking field with the same name (but not '_id'), add it after the original one
+	        original_res_fields.forEach(function(fld, idx1){
+	            new_fields.push(fld);
+	            fields_temp.forEach(function(fld2, idx2){
+	                var extra = fld2.id + '-il';
+	                console.log(extra)
+	                if (fld.id == fld2.id && fld.id !== '_id'){
+	                var new_fld = {
+	                            'id': extra,
+	                            'type': 'text'
+	                        };
+	                    new_fields.push(new_fld);
+	                }
+	            });
+	        });
+	          
+	        // For each original record, get the respectives value of the interlinking records
+	        original_res_results.result.records.forEach(function(rc, idx){
+	        	interlink_res_fields.forEach(function(fld2, idx2) {
+	            var extra = fld2.id + '-il';
+	                    if (fld2['id'] !== '_id'){
+	                        var val = interlink_res_results.result.records[idx][fld2['id']];
+	                        rc[extra] = val; 
+	                    }
+	                });
+	                records.push(rc);
+	        });
+	        var out = {
+	            total: original_res_results.result.total,
+	            fields: new_fields,
+	            hits: records
+	            };
+	        
+	
+	      cb(null, out);
     });
 
    });
@@ -121,7 +120,6 @@ if (isNodeModule) {
     actualQuery['method'] = 'upsert';
     actualQuery['allow_update_with_id'] = true;
     actualQuery['force'] = true;
-    //actualQuery['records'] = 
     var updates = queryObj.updates;
     console.log('QueryObj');
     console.log(queryObj);
@@ -354,11 +352,11 @@ recline.Backend.CkanInterlinkEdit = recline.Backend.CkanInterlinkEdit || {};
     
   // ### fetch
   my.fetch = function(dataset) {
+	console.log('inside custom fetch')  
     var dfd = new Deferred();
 
     my.query({}, dataset)
-      .done(function(data, lala) {
-
+      .done(function(data) {
         dfd.resolve({
           fields: data.fields,
           records: data.hits
@@ -388,23 +386,15 @@ recline.Backend.CkanInterlinkEdit = recline.Backend.CkanInterlinkEdit || {};
       dataset.id = out.resource_id;
       wrapper = new CKAN.Client(out.endpoint);
     }
-    console.log('dataset');
-    console.log(dataset);
+
     queryObj.resource_id = dataset.id;
+    queryObj.interlinking_resource = dataset.temp_interlinking_resource; 
     
-    //queryObj.translation_column = dataset.translation_column;
-    //queryObj.translation_language = dataset.translation_language;
-    
-    //queryObj.translation_resource = JSON.parse(dataset.has_translations)[dataset.translation_language]; 
-    queryObj.interlinking_resource = dataset.being_interlinked_with; 
-    //wrapper.datastoreUpdate(queryObj,function(err, out){
-    //});
     wrapper.datastoreQuery(queryObj, function(err, out) {
       if (err) {
         dfd.reject(err);
       } else {
         dfd.resolve(out);
-
       }
     });
     return dfd.promise();

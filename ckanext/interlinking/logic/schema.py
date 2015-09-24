@@ -101,15 +101,3 @@ def interlinking_resource_finalize_schema():
     }
     return schema
 
-'''
-    def translate_resource_search_schema():
-    schema = {
-        'resource_id': [not_missing, not_empty, resource_id_exists, unicode],
-        'language': [not_missing, unicode, OneOf(
-            ['en', 'el','es', 'de', 'fr'])],
-        '__junk': [empty],
-        '__before': [rename('id', 'resource_id')]
-    }
-    return schema
-'''
-

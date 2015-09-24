@@ -40,13 +40,14 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     },
 
     initialize: function () {
+      console.log('point 1')
       jQuery.proxyAll(this, /_on/);
-      
       this.save_btn = jQuery("#saveClicked");
       this.publish_btn = jQuery("#publishClicked");
       this.el.ready(this._onReady);
     },
     _onReady: function() {
+      console.log('point 2')
       this.loadPreviewDialog(preload_resource);  
     },
 
@@ -61,7 +62,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     // Returns nothing.
     loadPreviewDialog: function (resourceData) {
       var self = this;
-
+      console.log('point 3')
       function showError(msg){
         msg = msg || _('error loading preview');
         window.parent.ckan.pubsub.publish('data-viewer-error', msg);
@@ -88,6 +89,9 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
       var dataset; 
 
       if (resourceData.datastore_active) {
+      	console.log('resourceData>>')   
+    	console.log(resourceData)  
+    	// TO CHECK: Is this 'if' loop useful? 
         if (!("interlinking_resource" in resourceData)){
             resourceData.backend =  'ckanInterlinkEdit';
         }
@@ -100,16 +104,19 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         resourceData.endpoint = this.options.site_url + 'api';
          
         dataset = new recline.Model.Dataset(resourceData);
-         
+        console.log('dataset>>')
+        console.log(dataset) 
         errorMsg = this.options.i18n.errorLoadingPreview + ': ' + this.options.i18n.errorDataStore;
         
-        translate = new TranslateHelper(resourceData); 
-        
-        this.options.res_trans_id = res_trans_id = resourceData.being_interlinked_with;
+        int_helper = new InterlinkHelper(resourceData); 
+        console.log(int_helper)
+        this.options.res_interlink_id = res_interlink_id = resourceData.being_interlinked_with;
+        //this.options.res_interlink_id = res_interlink_id = resourceData.temp_interlinking_resource;
 
-        if (this.options.res_trans_id === undefined  && !("interlinking_resource" in resourceData)){
+        console.log(resourceData.on_interlinking_process)
+        if (this.options.res_interlink_id === undefined  && !(resourceData.on_interlinking_process == 'True')){
             console.log("Create new");
-            resourceData = translate.create(function() {}, function() { 
+            resourceData = int_helper.create(function() {}, function() { 
             self.initializeDataset(dataset, resourceData);
                 //window.location.reload() ;
             });
@@ -122,19 +129,19 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         }
       }
       else{
-          //TODO: doesnt work for some reason
+          //TODO: doesn't work for some reason
           self.sandbox.notify(self.i18n('datastore_disabled'), 'error');
       }
     },
     _onComplete: function(){
-            
+        console.log('point 4')    
         var self = this;
         dataExplorer.model.fetch().done(function(dataset){
             //var columns = dataset.fields.models;
-            var res = {id: self.options.res_trans_id, endpoint: self.options.site_url + 'api'};
+            var res = {id: self.options.res_interlink_id, endpoint: self.options.site_url + 'api'};
             console.log('asda');
             console.log(res);
-            translate.show_resource(res, function(response){ 
+            int_helper.show_resource(res, function(response){ 
                 if (response){
                     var columns= {};
                     try{
@@ -145,33 +152,36 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
                         //self._onRepaint(columns);
                     }
                     catch(err) {
-                        alert('oops');
+                        console.log('point oops');
                     }
                 }
                 else{
-                    alert('resource fetch failed');
+                    console.log('point resource fetch failed');
                 }
 
             });
         });
     },
     _onLoad: function(){
+        console.log('point 5')
         dataExplorer.notify({message: 'Loading', loader:true, category: 'warning', persist: true});
         //setTimeout(function(){ dataExplorer.model.fetch()}, 3000);
     },
 
     initializeDataset: function(dataset, resourceData) {
+        console.log('point 6')
         var self = this;
         
         
-     console.log('!!!! 4');
-     function showError(msg){
-        msg = msg || _('error loading preview');
-        window.parent.ckan.pubsub.publish('data-viewer-error', msg);
-      }
+	    function showError(msg){
+	        msg = msg || _('error loading preview');
+	        window.parent.ckan.pubsub.publish('data-viewer-error', msg);
+	    }
         dataset.fetch()
-              .done(function(dataset1){
-                
+        	.done(function(dataset1){
+        		console.log('got inside dataset.fetch')
+                console.log('dataset1')
+                console.log(dataset1)
                 var fields1 = dataset1.fields.models;
                 var records1 = dataset1.records.models;
                 
@@ -181,15 +191,12 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
                     var options = {column:col.name};
                     console.log(options);
                     self.deleteWithConfirmation(dataset1, options); 
-
                 });
-
                             
                 dataset.bind('title', function(col){
                         var col_translation = '';
-                        //translate.update({column:col.name, mode:'title', title:col_translation}, self._onLoad, self._onComplete);
+                        //int_helper.update({column:col.name, mode:'title', title:col_translation}, self._onLoad, self._onComplete);
                         self.confirm(self.i18n('confirm_update'));
-                    
                 });
                 
                 dataset.bind('translate-manual', function(col){
@@ -229,7 +236,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
                 self.publish_btn.click(function() {
                     //TODO: Save before publishing - something doesnt work
                     //dataset.save().done(function(dataset){
-                    //translate.publish(self._onLoad, function() { window.top.location.href = resourceData.url.substring(0,resourceData.url.indexOf('resource'))})
+                    //int_helper.publish(self._onLoad, function() { window.top.location.href = resourceData.url.substring(0,resourceData.url.indexOf('resource'))})
                     self.publishWithConfirmation(self._onLoad, function() { window.top.location.href = resourceData.url.substring(0,resourceData.url.indexOf('resource'))}); 
                     //});
 
@@ -242,12 +249,13 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
           });
     },
     _onSuccess: function(e) {
+        console.log('point 7')
         console.log('ae');
         console.log(e);
         console.log(this);
     },
     _onEditor: function(column) {
-
+        console.log('point 8')
         var pos = column.name.indexOf('-il');
         if (pos > -1){
             return  Slick.Editors.Text
@@ -258,6 +266,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     },
     
     initializeDataExplorer: function (dataset) {
+      console.log('point 9')
       var views = [
         {
           id: 'grid',
@@ -266,9 +275,8 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
             model: dataset,
             state: { gridOptions: {editable:true, editorFactory: {getEditor:this._onEditor} } }
           })
-        },
-        
-        ];
+        },        
+      ];
 
       var sidebarViews = [
         {
@@ -289,24 +297,26 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
           readOnly: true,
         }
       });
-    
-      
     },
+    
     _normalizeFormat: function (format) {
+      console.log('point 10')	
       var out = format.toLowerCase();
       out = out.split('/');
       out = out[out.length-1];
       return out;
     },
     _normalizeUrl: function (url) {
+      console.log('point 11')	
       if (url.indexOf('https') === 0) {
         return 'http' + url.slice(5);
-      } else {
+      } else {  
         return url;
       }
     },
     deleteWithConfirmation: function(dataset, options, ld, cb) {
-        //var res = {id:this.options.res_trans_id, endpoint:this.options.resourceData.endpoint};
+    	console.log('point 12')	
+        //var res = {id:this.options.res_interlink_id, endpoint:this.options.resourceData.endpoint};
             var ld = ld || this._onLoad;
             var cb = cb || this._onComplete;
             var field_exists = this.checkFieldExists(dataset, options);
@@ -326,6 +336,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
             }        
     },
     publishWithConfirmation: function(ld, cb) {
+    	console.log('point 13')
         var ld = ld || this._onLoad;
         var cb = cb || this._onComplete;
         this.options.helper = translate;
@@ -336,7 +347,8 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         this.confirm(this.i18n('confirm_publish'));
     },
     updateWithConfirmation: function(dataset, options, ld, cb) {
-        //var res = {id:this.options.res_trans_id, endpoint:this.options.resourceData.endpoint};
+    	console.log('point 14')
+        //var res = {id:this.options.res_interlink_id, endpoint:this.options.resourceData.endpoint};
             var ld = ld || this._onLoad;
             var cb = cb || this._onComplete;
             var field_exists = this.checkFieldExists(dataset, options);
@@ -353,10 +365,11 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
 
             }
             else{
-                translate.update(options, this._onLoad, this._onComplete);
+                int_helper.update(options, this._onLoad, this._onComplete);
             }        
     },
     checkFieldExists: function(dataset, options){
+    	console.log('point 15')
         var col = options.column+'-il';
         var fields = dataset.fields.models;
         var field_exists = false; 
@@ -369,6 +382,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         return field_exists;
     },
     confirm: function (text) {
+    	console.log('point 16')
       this.sandbox.body.append(this.createModal(text));
       this.modal.modal('show');
       
@@ -380,6 +394,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     },
 
      createModal: function (text) {
+    	 console.log('point 17')
       //if (!this.modal) {
       // re-create modal everytime it is called
         var element = this.modal = jQuery(this.options.template);
@@ -397,6 +412,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
 
     /* Event handler for the success event */
     _onConfirmSuccess: function (e) {
+    	console.log('point 18')
         var h = this.options.helper;
         var action = this.options.action;
         var options = this.options.options;
@@ -410,9 +426,11 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
 
     /* Event handler for the cancel event */
     _onConfirmCancel: function (event) {
+    	console.log('point 19')
       this.modal.modal('hide');
     },
     _onRepaint: function(columns){
+    	console.log('point 20')
         var header = jQuery(".data-view-container .slick-header .slick-column-name");
         var self = this;
         for (var key in columns){

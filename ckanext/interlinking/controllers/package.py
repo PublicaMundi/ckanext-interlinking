@@ -3,10 +3,11 @@ from ckan.lib.base import (
 import ckan.plugins.toolkit as toolkit
 import ckan.model as model
 import json
+import pprint
 NotFound = toolkit.ObjectNotFound
 NotAuthorized = toolkit.NotAuthorized
 
-class UserController(BaseController):
+class InterlinkingController(BaseController):
     def resource_interlink(self, resource_id, id):
         #user_dict = self._check_access()
         #self._setup_template_variables(user_dict)
@@ -26,8 +27,7 @@ class UserController(BaseController):
         img tag where the image is loaded directly or an iframe that embeds a
         webpage, recline or a pdf preview.
         '''
-        print 'OOOO'
-        print resource_id
+
         context = {
             'model': model,
             'session': model.Session,
@@ -84,7 +84,7 @@ class UserController(BaseController):
         #c.user_dict = user_dict
         #c.is_myself = user_dict['name'] == c.user
         #c.about_formatted = h.render_markdown(user_dict['about'])
-        print pkg_dict
+        ######print pkg_dict
         #c.pkg_dict = pkg_dict
         c.package = pkg_dict
         c.resource = resource

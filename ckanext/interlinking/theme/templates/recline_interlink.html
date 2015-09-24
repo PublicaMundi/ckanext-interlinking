@@ -3,15 +3,26 @@
 <div id="windowTitleDialog" class="modal hide" tabindex="-1" role="dialog" aria-labelledby="windowTitleLabel" aria-hidden="true">
         </div>
         <!-- <a data-toggle="modal" id="button" href="#windowTitleDialog" class="btn btn-primary btn-large">Click</a> -->
-        <div id="saveButtons" style="float:right"> <a href="#" class="btn" id="saveClicked">Save</a> <a href="#" class="btn btn-primary" id="publishClicked">Publish</a> </div>
-<div id="reclinetranslate" data-module="recline_interlink_preview" data-module-site_url="{{ h.dump_json(h.url('/', locale='default', qualified=true)) }}">
+        
+        <div id="saveButtons" style="float:right"> 
+        	<a href="#" class="btn" id="saveClicked">Save</a> 
+       		<a href="#" class="btn btn-primary" id="publishClicked">Publish</a> 
+       	</div>
+		<div id="reclinetranslate" 
+			data-module="recline_interlink_preview" 
+			data-module-site_url="{{ h.dump_json(h.url('/', locale='default', qualified=true)) }}">
       
-          <h4 class="loading-dialog">
-      <div class="loading-spinner"></div>
-      <div class="left">{{ _('Loading...') }}</div>
-    </h4>
-  </div>
-  <div id="popup"></div>
+       
+        <h4 class="loading-dialog">
+        	<div class="loading-spinner"></div>
+      		<div class="left">{{ _('Loading...') }}</div>
+    	</h4>
+</div>
+  
+<div id="popup"></div>
+  
+  
+  
 
   {% resource 'ckanext-interlinking/edit' %}
 {% endblock %}
