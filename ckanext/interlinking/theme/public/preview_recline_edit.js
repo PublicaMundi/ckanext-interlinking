@@ -91,13 +91,8 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
       if (resourceData.datastore_active) {
       	console.log('resourceData>>')   
     	console.log(resourceData)  
-    	// TO CHECK: Is this 'if' loop useful? 
-        if (!("interlinking_resource" in resourceData)){
-            resourceData.backend =  'ckanInterlinkEdit';
-        }
-        else{
-            resourceData.backend =  'ckan';
-        }
+        resourceData.backend =  'ckanInterlinkEdit';
+      	
         // Set endpoint of the resource to the datastore api (so it can locate
         // CKAN DataStore)
         //resourceData.endpoint = jQuery('body').data('site-root') + 'api';
@@ -109,11 +104,8 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         errorMsg = this.options.i18n.errorLoadingPreview + ': ' + this.options.i18n.errorDataStore;
         
         int_helper = new InterlinkHelper(resourceData); 
-        console.log(int_helper)
-        this.options.res_interlink_id = res_interlink_id = resourceData.being_interlinked_with;
-        //this.options.res_interlink_id = res_interlink_id = resourceData.temp_interlinking_resource;
+        this.options.res_interlink_id = res_interlink_id = resourceData.temp_interlinking_resource;
 
-        console.log(resourceData.on_interlinking_process)
         if (this.options.res_interlink_id === undefined  && !(resourceData.on_interlinking_process == 'True')){
             console.log("Create new");
             resourceData = int_helper.create(function() {}, function() { 
@@ -139,8 +131,6 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         dataExplorer.model.fetch().done(function(dataset){
             //var columns = dataset.fields.models;
             var res = {id: self.options.res_interlink_id, endpoint: self.options.site_url + 'api'};
-            console.log('asda');
-            console.log(res);
             int_helper.show_resource(res, function(response){ 
                 if (response){
                     var columns= {};
@@ -172,7 +162,6 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         console.log('point 6')
         var self = this;
         
-        
 	    function showError(msg){
 	        msg = msg || _('error loading preview');
 	        window.parent.ckan.pubsub.publish('data-viewer-error', msg);
@@ -182,15 +171,25 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         		console.log('got inside dataset.fetch')
                 console.log('dataset1')
                 console.log(dataset1)
+                console.log('dataset')
+                console.log(dataset)
                 var fields1 = dataset1.fields.models;
                 var records1 = dataset1.records.models;
                 
                 self.initializeDataExplorer(dataset1);
                 
+                
+                dataset.bind('interlink-with', function(col, reference_dataset){
+                    var options = {column: col.name, reference_dataset: reference_dataset};
+                    console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1');
+                    console.log(options);
+                    //self.deleteWithConfirmation(dataset1, options); 
+                });
+                /*
                 dataset.bind('translate-no', function(col){
                     var options = {column:col.name};
                     console.log(options);
-                    self.deleteWithConfirmation(dataset1, options); 
+                    //self.deleteWithConfirmation(dataset1, options); 
                 });
                             
                 dataset.bind('title', function(col){
@@ -202,20 +201,20 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
                 dataset.bind('translate-manual', function(col){
                     var options = {column:col.name, mode:'manual'};
                     console.log(options);
-                    self.updateWithConfirmation(dataset1, options); 
+                    //self.updateWithConfirmation(dataset1, options); 
                 });
 
                 dataset.bind('transcript', function(col){
                     var options = {column:col.name, mode:'transcription'};
-                    self.updateWithConfirmation(dataset1, options); 
+                    //self.updateWithConfirmation(dataset1, options); 
                 });
 
                 dataset.bind('translate-auto', function(col){
                     //TODO
                     var options = {column:col.name, mode:'automatic'};
-                    self.updateWithConfirmation(dataset1, options); 
+                    //self.updateWithConfirmation(dataset1, options); 
                 });
-    
+    			*/
                 dataset1.queryState.bind('save', function(){
                     //console.log('dataset being saved...');
                     self.sandbox.notify('hello', 'success');
@@ -239,7 +238,6 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
                     //int_helper.publish(self._onLoad, function() { window.top.location.href = resourceData.url.substring(0,resourceData.url.indexOf('resource'))})
                     self.publishWithConfirmation(self._onLoad, function() { window.top.location.href = resourceData.url.substring(0,resourceData.url.indexOf('resource'))}); 
                     //});
-
                 })
         
           })
@@ -323,7 +321,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
 
             if (field_exists){
                 var col_translation = '';
-                this.options.helper = translate;
+                this.options.helper = int_helper;
                 this.options.action = 'delete';
                 this.options.options = options;
                 this.options.cb = cb;
@@ -339,7 +337,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     	console.log('point 13')
         var ld = ld || this._onLoad;
         var cb = cb || this._onComplete;
-        this.options.helper = translate;
+        this.options.helper = int_helper;
         this.options.action = 'publish';
         this.options.options = {};
         this.options.cb = cb;
@@ -355,7 +353,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
 
             if (field_exists){
                 var col_translation = '';
-                this.options.helper = translate;
+                this.options.helper = int_helper;
                 this.options.action = 'update';
                 this.options.options = options;
                 this.options.ld = ld;
@@ -417,9 +415,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         var action = this.options.action;
         var options = this.options.options;
         var ld = this.options.ld;
-        var cb = this.options.cb;
-        console.log('callback');
-        console.log(cb);   
+        var cb = this.options.cb;  
         this.sandbox.body.append(h[action](options, ld, cb));
       this.modal.modal('hide');
     },

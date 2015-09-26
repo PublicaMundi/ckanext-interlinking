@@ -1,6 +1,5 @@
 // API calls helpers 
 //
-
 //this.TranslateApiHelper = this.TranslateApiHelper || {};
 
 //(function ($, my) {
@@ -64,6 +63,17 @@ function InterlinkHelper (resource){
         }
         return self.call_ajax(url, options, ld, cb);    
     };
+    
+    this.publish = function(options, ld, cb) {
+        var url = resource.endpoint + '/3/action/interlinking_resource_finalize';
+        
+        var res_id = resource.id;
+
+        var options = {
+            resource_id:res_id,
+        }
+        console.log('publish')    
+    };
 
     this.finalize = function(options, ld, cb) {
         var url = resource.endpoint + '/3/action/interlinking_resource_finalize';
@@ -75,6 +85,12 @@ function InterlinkHelper (resource){
         }
         return this.call_ajax(url, options, ld, cb);    
     };
+    
+    this.get_interlinking_references(){
+    	var url = resource.endpoint + '/3/action/interlinking_get_reference_resources';
+    	options = {}
+    	return this.call_ajax(url, options, ld, cb);
+    },
 
 
     this.show =  function(resource, cb) {

@@ -79,7 +79,6 @@ if (isNodeModule) {
 	            new_fields.push(fld);
 	            fields_temp.forEach(function(fld2, idx2){
 	                var extra = fld2.id + '-il';
-	                console.log(extra)
 	                if (fld.id == fld2.id && fld.id !== '_id'){
 	                var new_fld = {
 	                            'id': extra,
@@ -402,8 +401,6 @@ recline.Backend.CkanInterlinkEdit = recline.Backend.CkanInterlinkEdit || {};
 
   my.save = function(queryObj, dataset) {
       var dfd = new Deferred(), wrapper;
-      console.log('dfd');
-      console.log(dfd);
       if (dataset.endpoint) {
           wrapper = new CKAN.Client(dataset.endpoint);
       }

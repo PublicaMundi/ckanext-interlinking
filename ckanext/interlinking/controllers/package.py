@@ -11,7 +11,6 @@ class InterlinkingController(BaseController):
     def resource_interlink(self, resource_id, id):
         #user_dict = self._check_access()
         #self._setup_template_variables(user_dict)
-        print 'EEEEEEE'
         print resource_id
         pkg_dict = self._check_pkg_access(id)
         res = self._check_res_access(resource_id)

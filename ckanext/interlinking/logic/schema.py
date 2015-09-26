@@ -101,3 +101,10 @@ def interlinking_resource_finalize_schema():
     }
     return schema
 
+def interlinking_get_reference_resources_schema():
+    schema = {
+        '__junk': [empty],
+        '__before': [rename('id', 'resource_id')]
+    }
+    return schema
+

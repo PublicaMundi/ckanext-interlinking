@@ -55,6 +55,7 @@ class ReclinePreviewInterlinking(p.SingletonPlugin):
                 'interlinking_resource_update': action.interlinking_resource_update,
                 'interlinking_resource_delete': action.interlinking_resource_delete,
                 'interlinking_resource_finalize': action.interlinking_resource_finalize,
+                'interlinking_get_reference_resources': action.interlinking_get_reference_resources,
                 }
     
     # IRoutes 1/1 function (inherit=True)
@@ -79,6 +80,7 @@ class ReclinePreviewInterlinking(p.SingletonPlugin):
                 'interlinking_resource_update': auth.interlinking_resource_update,
                 'interlinking_resource_delete': auth.interlinking_resource_delete,
                 'interlinking_resource_finalize': auth.interlinking_resource_finalize,
+                'interlinking_get_reference_resources': auth.interlinking_get_reference_resources,
                 }
     # ITemplateHelpers 1/1 function    
     def get_helpers(self):

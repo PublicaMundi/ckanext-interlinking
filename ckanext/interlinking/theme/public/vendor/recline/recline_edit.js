@@ -3966,7 +3966,7 @@ my.MultiView = Backbone.View.extend({
   events: {
     'click .menu-right a': '_onMenuClick',
     'click .navigation a': '_onSwitchView',
-    'click #translate-btn': '_onTranslateClick'
+    //'click #translate-btn': '_onTranslateClick'
   },
 
   initialize: function(options) {
@@ -4185,6 +4185,7 @@ my.MultiView = Backbone.View.extend({
     this.updateNav(viewName);
     this.state.set({currentView: viewName});
   },
+  /*
   _onTranslateClick: function(e){
     e.preventDefault();
     //console.log('Translate button clicked!');
@@ -4195,7 +4196,7 @@ my.MultiView = Backbone.View.extend({
         this.mode = "default";
     }
 
-  },
+  },*/
 
   // create a state object for this view and do the job of
   // 
@@ -4655,7 +4656,7 @@ my.SlickGrid = Backbone.View.extend({
       model.set(v);
     });
 
-    var columnpicker = new Slick.Controls.TColumnPicker(this.model, columns, this.grid,
+    var columnpicker = new Slick.Controls.IColumnPicker(this.model, columns, this.grid,
                                                        _.extend(options,{state:this.state}));
             
     if (self.visible){
@@ -4691,7 +4692,7 @@ my.SlickGrid = Backbone.View.extend({
 
 
 (function ($) {
-  function TranslateColumnPicker(model, columns, grid, options) {
+  function InterlinkingColumnPicker(model, columns, grid, options) {
     var $menu;
     var columnCheckboxes;
     var column;
@@ -4719,74 +4720,17 @@ my.SlickGrid = Backbone.View.extend({
       columnCheckboxes = [];
       //console.log(args);
       var $li, $input;
-      /* for (var i = 0; i < columns.length; i++) {
-        $li = $('<li />').appendTo($menu);
-        $input = $('<input type="checkbox" />').data('column-id', columns[i].id).attr('id','slick-column-vis-'+columns[i].id);
-        columnCheckboxes.push($input);
 
-        if (grid.getColumnIndex(columns[i].id) !== null) {
-          $input.attr('checked', 'checked');
-        }
-        $input.appendTo($li);
-        $('<label />')
-            .text(columns[i].name)
-            .attr('for','slick-column-vis-'+columns[i].id)
-            .appendTo($li);
-      }
-      $('<li/>').addClass('divider').appendTo($menu); */
-   
-      /*$li = $('<li />').appendTo($menu);
-      $input = $('<input type="checkbox">').data('option', 'title').attr('id','title');
-      $input.appendTo($li);
-      columnCheckboxes.push($input);
-      $('<label />')
-          .text('Translate Title')
-          .appendTo($li);
-      */
       $li = $('<li />').appendTo($menu);
-      $input = $('<input type="checkbox" />').data('option', 'translate-automatic').attr('id','translate-automatic');
+      $input = $('<input type="checkbox" />').data('option', 'interlink-with').attr('id','interlink-with');
       columnCheckboxes.push($input);
       $input.appendTo($li);
       $('<label />')
-          .text('Automatic Translation')
+          .text('Interlink with: Kallikratikoi dhmoi')
           .appendTo($li);
       $('</input>').appendTo($li);      
       
-      $li = $('<li />').appendTo($menu);
-      $input = $('<input type="checkbox">').data('option', 'translate-manual').attr('id','translate-manual');
-      $input.appendTo($li);
-      columnCheckboxes.push($input);
-      $('<label />')
-          .text('Manual Translation')
-          .appendTo($li);
-      
-      $li = $('<li />').appendTo($menu);
-      $input = $('<input type="checkbox">').data('option', 'transcript').attr('id','transcript');
-      $input.appendTo($li);
-      columnCheckboxes.push($input);
-      $('<label />')
-          .text('Transcription')
-          .appendTo($li);
 
-      $li = $('<li />').appendTo($menu);
-      $input = $('<input type="checkbox">').data('option', 'translate-no').attr('id','translate-no');
-      columnCheckboxes.push($input);
-      $input.appendTo($li);
-      $('<label />')
-          .text('Non Translatable')
-          .appendTo($li);
-
-      /* $li = $('<li />').data('option', 'autoresize').appendTo($menu);
-      $input = $('<input type="checkbox" />').data('option', 'autoresize').attr('id','slick-option-autoresize');
-      $input.appendTo($li);
-      $('<label />')
-          .text('Force fit columns')
-          .attr('for','slick-option-autoresize')
-          .appendTo($li);
-      if (grid.getOptions().forceFitColumns) {
-        $input.attr('checked', 'checked');
-      }
-        */
       $menu.css('top', e.pageY - 10)
           .css('left', e.pageX - 10)
           .fadeIn(options.fadeSpeed);
@@ -4798,41 +4742,17 @@ my.SlickGrid = Backbone.View.extend({
         console.log(column.state);
         //console.log('col');
         //console.log(column);
+        
+        reference = 'Kallikratikoi Dhmoi'
       var checkbox;
       if ($(e.target).data('option') === 'translate-no' ){
+    	  alert($(e.target).data('option'))
           //alert('non translatable');
           model.trigger('translate-no', column);
 
       }
-        else if ($(e.target).data('option') === 'title'){
-        model.trigger('title', column);
-        }    
-        else if ($(e.target).data('option') === 'transcript'){
-        model.trigger('transcript', column);
-        
-      }
-
-      else if ($(e.target).data('option') === 'translate-manual'){
-        //var name = string;
-        model.trigger('translate-manual', column);
-        
-      }
-      else if ($(e.target).data('option') === 'translate-automatic'){
-          //var html = ' <div class="modal-header"><a href="#" class="close" data-dismiss="modal">&times;</a> <h3>Automatic Translation options</h3></div> <div class="modal-body"> <div class="divDialogElements"><label><h4>Column title:</h4></label><input class="medium" id="xlInput" name="xlInput" type="text" /> <div class="control-group"><label class="control-label"><h4>Select source:</h4></label> <div class="controls"> <select> <option value="geonames">GeoNames</option><option value="wikipedia">Wikipedia</option><option value="osm" >OpenStreet Maps</option></select></div></div> </div></div> <div class="modal-footer"><a href="#" class="btn" id="closeDialog">Cancel</a> <a href="#" class="btn btn-primary" id="okClicked">OK</a> </div>';
-
-        //jQuery("#windowTitleDialog").html(html);
-        //jQuery("#windowTitleDialog").modal('show');
-        //jQuery("#okClicked").on('click',function(){
-        //    jQuery("#windowTitleDialog").modal('hide');
-        //    var string = jQuery("#xlInput")[0].value;
-            
-        model.trigger('translate-auto', column);
-
-        //});
-        //jQuery("#closeDialog").on('click',function(){
-        //    jQuery("#windowTitleDialog").modal('hide');
-        //});
-        
+      else if ($(e.target).data('option') === 'interlink-with'){
+    	  model.trigger('interlink-with', column, reference); 
       }
 
       if ($(e.target).data('option') === 'autoresize') {
@@ -4854,37 +4774,12 @@ my.SlickGrid = Backbone.View.extend({
         options.state.set({fitColumns:checked});
         return;
       }
-    /*
-      if (($(e.target).is('li') && !$(e.target).hasClass('divider')) ||
-            $(e.target).is('input')) {
-        if ($(e.target).is('li')){
-            checkbox = $(e.target).find('input').first();
-            checkbox.attr('checked',!checkbox.is(':checked'));
-        }
-        var visibleColumns = [];
-        var hiddenColumnsIds = [];
-        $.each(columnCheckboxes, function (i, e) {
-          if ($(this).is(':checked')) {
-            visibleColumns.push(columns[i]);
-          } else {
-            hiddenColumnsIds.push(columns[i].id);
-          }
-        });
 
-        if (!visibleColumns.length) {
-          $(e.target).attr('checked', 'checked');
-          return;
-        }
-
-        grid.setColumns(visibleColumns);
-        options.state.set({hiddenColumns:hiddenColumnsIds});
-      }
-      */
     }
     init();
   }
   // Slick.Controls.ColumnPicker
-    $.extend(true, window, { Slick:{ Controls:{ TColumnPicker:TranslateColumnPicker }}});
+    $.extend(true, window, { Slick:{ Controls:{ IColumnPicker:InterlinkingColumnPicker }}});
 })(jQuery);
 
 
