@@ -4700,18 +4700,43 @@ my.SlickGrid = Backbone.View.extend({
     var defaults = {
       fadeSpeed:250
     };
-
     function init() {
       grid.onHeaderContextMenu.subscribe(handleHeaderContextMenu);
       options = $.extend({}, defaults, options);
-
-      $menu = $('<ul class="dropdown-menu slick-contextmenu" style="display:none;position:absolute;z-index:20;" />').appendTo(document.body);
-
+      //$menu = $('<ul class="dropdown-menu slick-contextmenu" style="display:none;position:absolute;z-index:20;" />').appendTo(document.body);
+      
+      //TODO: Make sure that it is not created twice
+      $menu = $('<ul id="interlinkingChoices" class="contextMenu" style="display:none;position:absolute;" />').appendTo(document.body);
+	      
       $menu.bind('mouseleave', function (e) {
         $(this).fadeOut(options.fadeSpeed);
       });
+	      
       $menu.bind('click', updateColumn);
-
+    }
+    
+    function _onCompleteGetInterlinkingReferences(results){
+        var results = results.responseJSON.result
+        
+        $('<b>Interlink with:</b>').appendTo($menu)
+        for (var res in results){
+        	ref = results[res]
+        	for (var name in ref){
+        		console.log(name + ' > '+ ref[name])
+        	}
+        	
+        	$li = $('<li />').appendTo($menu);
+        	$li.attr('id', ref['ref-id']).text(ref['name'])
+            //$input = $('<input type="checkbox" />').data('option', 'interlink-with').attr('id','interlink-with');
+            //columnCheckboxes.push($input);
+            /*
+        	$input.appendTo($li);
+            $('<label />')
+                .text('Interlink with: ' + ref['name'])
+                .appendTo($li);
+            $('</input>').appendTo($li);    
+            */  
+        }
     }
 
     function handleHeaderContextMenu(e, args) {
@@ -4721,14 +4746,9 @@ my.SlickGrid = Backbone.View.extend({
       //console.log(args);
       var $li, $input;
 
-      $li = $('<li />').appendTo($menu);
-      $input = $('<input type="checkbox" />').data('option', 'interlink-with').attr('id','interlink-with');
-      columnCheckboxes.push($input);
-      $input.appendTo($li);
-      $('<label />')
-          .text('Interlink with: Kallikratikoi dhmoi')
-          .appendTo($li);
-      $('</input>').appendTo($li);      
+      
+      var interlinking_references = int_helper.get_interlinking_references(function() {}, _onCompleteGetInterlinkingReferences)
+      //console.log
       
 
       $menu.css('top', e.pageY - 10)
@@ -4789,6 +4809,7 @@ my.SlickGrid = Backbone.View.extend({
 * http://mleibman.github.com/SlickGrid/examples/example-grouping
 *
 */
+/*
 (function ($) {
   function SlickColumnPicker(columns, grid, options) {
     var $menu;
@@ -4903,6 +4924,7 @@ my.SlickGrid = Backbone.View.extend({
   // Slick.Controls.ColumnPicker
     $.extend(true, window, { Slick:{ Controls:{ ColumnPicker:SlickColumnPicker }}});
 })(jQuery);
+*/
 /*jshint multistr:true */
 
 this.recline = this.recline || {};

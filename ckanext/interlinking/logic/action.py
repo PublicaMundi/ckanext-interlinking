@@ -14,6 +14,7 @@ from unidecode import unidecode
 from random import uniform
 import ckan.lib.navl.dictization_functions
 import ckan.logic as logic
+import ckan.plugins.toolkit as toolkit
 import ckan.plugins as p
 import ckanext.interlinking.logic.schema as dsschema
 import ckanext.interlinking.logic.solr_access as solr_access
@@ -297,19 +298,21 @@ def interlinking_resource_finalize(context, data_dict):
     return p.toolkit.get_action('interlinking_resource_delete')(context, {'resource_id': temp_interlinking_resource})
 
 # This action provides all available reference resources for interlinking
+@toolkit.side_effect_free
 def interlinking_get_reference_resources(context, data_dict):
     raw_ref_resources_str = pylons.config.get('ckanext.interlinking.references')
     raw_ref_resources = raw_ref_resources_str.strip().split('\n')
     ref_resources = []
     for raw_ref_resource in raw_ref_resources:
         ref_resource_members = raw_ref_resource.split(':')
-        if len(ref_resource_members) != 4:
+        if len(ref_resource_members) != 5:
             raise p.toolkit.ValidationError('Malformed reference resources')
         ref_resource = {}
         ref_resource['name'] = ref_resource_members[0];
-        ref_resource['dataset-id'] = ref_resource_members[1]
-        ref_resource['resource-id'] = ref_resource_members[2]
-        ref_resource['column-name'] = ref_resource_members[3]
+        ref_resource['ref-id'] = ref_resource_members[1];
+        ref_resource['dataset-id'] = ref_resource_members[2]
+        ref_resource['resource-id'] = ref_resource_members[3]
+        ref_resource['column-name'] = ref_resource_members[4]
         ref_resources.append(ref_resource)
     return ref_resources
         

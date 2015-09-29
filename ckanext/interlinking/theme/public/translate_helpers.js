@@ -86,10 +86,11 @@ function InterlinkHelper (resource){
         return this.call_ajax(url, options, ld, cb);    
     };
     
-    this.get_interlinking_references(){
+    this.get_interlinking_references = function(ld, cb){
     	var url = resource.endpoint + '/3/action/interlinking_get_reference_resources';
     	options = {}
     	return this.call_ajax(url, options, ld, cb);
+    	//return this.call_get(url)
     },
 
 
@@ -139,8 +140,7 @@ function InterlinkHelper (resource){
             beforeSend: ld,
             complete: cb,
             success: function(response) {
-                //console.log('succeeded');
-                //console.log(response);
+                return response;
             },
             failure: function(response) {
                 //console.log('failed');
@@ -156,6 +156,29 @@ function InterlinkHelper (resource){
             },
         });
     };
+    
+    this.call_get = function(url){
+    	return $.post({
+            url: url,
+            dataType: 'json',
+            success: function(response) {
+                return response;
+            },
+            failure: function(response) {
+                //console.log('failed');
+                //console.log(response);
+            },
+            error: function(response) {
+                //if (response.status == 409){
+                //    return;
+                //}
+                console.log('error');
+                console.log(response);
+                alert('Error: .\n' + response.status + ':' + response.responseText);
+            },
+        });
+    }
+    
     this._strip_package_id = function(url) {
         // CKAN 2.2 doesn't provide package_id in resource_show
         // strip it from url

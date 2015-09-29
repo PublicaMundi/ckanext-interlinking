@@ -109,6 +109,8 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         if (this.options.res_interlink_id === undefined  && !(resourceData.on_interlinking_process == 'True')){
             console.log("Create new");
             resourceData = int_helper.create(function() {}, function() { 
+            console.log('RESOURCE DATA >> 1')
+            console.log(resourceData)
             self.initializeDataset(dataset, resourceData);
                 //window.location.reload() ;
             });
@@ -117,7 +119,10 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         }
         else{
             var translationResource = null;
+            console.log('RESOURCE DATA >> 2')
+            console.log(resourceData)
             this.initializeDataset(dataset, resourceData);
+            
         }
       }
       else{
@@ -125,8 +130,8 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
           self.sandbox.notify(self.i18n('datastore_disabled'), 'error');
       }
     },
-    _onComplete: function(){
-        console.log('point 4')    
+    _onCompleteShow: function(){
+        console.log('point 4.1')    
         var self = this;
         dataExplorer.model.fetch().done(function(dataset){
             //var columns = dataset.fields.models;
@@ -148,9 +153,20 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
                 else{
                     console.log('point resource fetch failed');
                 }
-
             });
         });
+    },
+    
+    _onCompleteGetInterlinkingReferences: function(results){
+        console.log('point 4.2')  
+        var results = results.responseJSON.result
+        for (var res in results){
+        	console.log('****************')
+        	ref = results[res]
+        	for (var name in ref){
+        		console.log(name + ' > '+ ref[name])
+        	}
+        }
     },
     _onLoad: function(){
         console.log('point 5')
@@ -160,6 +176,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
 
     initializeDataset: function(dataset, resourceData) {
         console.log('point 6')
+        console.log(resourceData)
         var self = this;
         
 	    function showError(msg){
@@ -194,7 +211,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
                             
                 dataset.bind('title', function(col){
                         var col_translation = '';
-                        //int_helper.update({column:col.name, mode:'title', title:col_translation}, self._onLoad, self._onComplete);
+                        //int_helper.update({column:col.name, mode:'title', title:col_translation}, self._onLoad, self._onCompleteShow);
                         self.confirm(self.i18n('confirm_update'));
                 });
                 
@@ -316,7 +333,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     	console.log('point 12')	
         //var res = {id:this.options.res_interlink_id, endpoint:this.options.resourceData.endpoint};
             var ld = ld || this._onLoad;
-            var cb = cb || this._onComplete;
+            var cb = cb || this._onCompleteShow;
             var field_exists = this.checkFieldExists(dataset, options);
 
             if (field_exists){
@@ -333,22 +350,26 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
             else{
             }        
     },
-    publishWithConfirmation: function(ld, cb) {
+    publishWithConfirmation: function(ld, cp) {
     	console.log('point 13')
+    	var interlinking_references = int_helper.get_interlinking_references(function() {}, this._onCompleteGetInterlinkingReferences)
+    	
+    	/*
         var ld = ld || this._onLoad;
-        var cb = cb || this._onComplete;
+        var cb = cb || this._onCompleteShow;
         this.options.helper = int_helper;
-        this.options.action = 'publish';
+        this.options.action = 'get_interlinking_references';
         this.options.options = {};
         this.options.cb = cb;
         this.options.ld = ld;
         this.confirm(this.i18n('confirm_publish'));
+        */
     },
     updateWithConfirmation: function(dataset, options, ld, cb) {
     	console.log('point 14')
         //var res = {id:this.options.res_interlink_id, endpoint:this.options.resourceData.endpoint};
             var ld = ld || this._onLoad;
-            var cb = cb || this._onComplete;
+            var cb = cb || this._onCompleteShow;
             var field_exists = this.checkFieldExists(dataset, options);
 
             if (field_exists){
@@ -363,7 +384,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
 
             }
             else{
-                int_helper.update(options, this._onLoad, this._onComplete);
+                int_helper.update(options, this._onLoad, this._onCompleteShow);
             }        
     },
     checkFieldExists: function(dataset, options){

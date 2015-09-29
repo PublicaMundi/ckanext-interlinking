@@ -49,3 +49,32 @@ body {
 .divButton {
     padding-top: 12px;
 }
+
+
+.contextMenu {
+  background: #fff;
+  border: 1px solid gray;
+  padding: 2px;
+  display: inline-block;createJSON
+  min-width: 100px;
+  /*-moz-box-shadow: 2px 2px 2px silver;*/
+  /*-webkit-box-shadow: 2px 2px 2px silver;*/
+  z-index: 99999;
+}
+
+.contextMenu li {
+  padding: 4px 4px 4px 14px;
+  list-style: none;
+  cursor: pointer;
+  /*background: url("images/arrow_right_blue.png") no-repeat center left;*/
+}
+
+.contextMenu li:hover {
+  color:#fff;
+  /*background: url("images/arrow_right_white.png") no-repeat center left;*/
+  background-color: #4e59a4;
+}
+
+.contextMenu hr {
+  margin:3px;
+}
