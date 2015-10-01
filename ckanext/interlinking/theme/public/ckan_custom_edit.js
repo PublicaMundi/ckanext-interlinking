@@ -40,7 +40,7 @@ if (isNodeModule) {
   my.Client.prototype.datastoreQuery = function(queryObj, cb) {
     var actualQuery = my._normalizeQuery(queryObj);
     var self = this;
-    
+        
     this.action('datastore_search', actualQuery, function(err, original_res_results) {
       if (err) {
         cb(err);
@@ -70,32 +70,72 @@ if (isNodeModule) {
 	      });
 
 	        var records = [];
-	        new_fields = []
-	        fields_temp = interlink_res_fields.slice(0);
+	        var new_fields = []
+	        var fields_temp = interlink_res_fields.slice(0);
 
 	        // For each original field, add it to final fields, and if you find an 
 	        // interlinking field with the same name (but not '_id'), add it after the original one
 	        original_res_fields.forEach(function(fld, idx1){
-	            new_fields.push(fld);
+	        	var match_found = false;
 	            fields_temp.forEach(function(fld2, idx2){
-	                var extra = fld2.id + '-il';
+	                var int_col_id = fld2.id + '-int';
+	                
 	                if (fld.id == fld2.id && fld.id !== '_id'){
-	                var new_fld = {
-	                            'id': extra,
-	                            'type': 'text'
+	                	match_found = true;
+	                	// The original fields metadata are updated to note that it is under interlinking
+	                	var new_fld = fld
+	                	new_fld.isInterlinked = true;
+	                	new_fields.push(new_fld);
+	                	
+	                	// This is the field which the users sees. It contains the best interlinking result,
+	                	//   or the user's choice if he has chosen a different result
+	                	new_fld = {
+	                            'id': int_col_id,
+	                            'label': fld2.id,
+	                            'type': 'text',
+	                            'hostsInterlinkingResult': true
+	                        };
+	                    new_fields.push(new_fld);
+	                    
+	                    // This field contains the score of the previous one (best result or user's choice).
+	                    new_fld = {
+	                            'id': fld2.id + '-int-score',
+	                    		'label': 'score',
+	                            'type': 'number',
+	                            'format': 'float-percentage',
+	                            'hostsInterlinkingScore': true
+	                            // TODO: create a custom renderer	
+	                        };
+	                    new_fields.push(new_fld);
+	                    
+	                    // This field contains all results along with their scores.
+	                    new_fld = {
+	                            'id': fld2.id + '-int-results',
+	                            'type': 'text',
+	                            'hostsAllInterlinkingResults': true
 	                        };
 	                    new_fields.push(new_fld);
 	                }
 	            });
+	            if(!match_found){
+	            	new_fields.push(fld);
+	            }
 	        });
-	          
-	        // For each original record, get the respectives value of the interlinking records
+	        // For each original record, get the respective value of the interlinking records
 	        original_res_results.result.records.forEach(function(rc, idx){
 	        	interlink_res_fields.forEach(function(fld2, idx2) {
-	            var extra = fld2.id + '-il';
 	                    if (fld2['id'] !== '_id'){
-	                        var val = interlink_res_results.result.records[idx][fld2['id']];
-	                        rc[extra] = val; 
+	                    	var int_col_id = fld2.id + '-int';
+	                    	var int_score_col_name = fld2.id + '-int-score';
+	                    	var int_results_col_name = fld2.id + '-int-results';
+
+	                        var val_int = interlink_res_results.result.records[idx][fld2['id']];
+	                        var val_int_score = interlink_res_results.result.records[idx][(fld2['id'] + '-score')];
+	                        var val_int_results = interlink_res_results.result.records[idx][(fld2['id'] + '-results')];
+
+	                        rc[int_col_id] = val_int; 
+	                        rc[int_score_col_name] = val_int_score; 
+	                        rc[int_results_col_name] = val_int_results; 
 	                    }
 	                });
 	                records.push(rc);
@@ -106,7 +146,6 @@ if (isNodeModule) {
 	            hits: records
 	            };
 	        
-	
 	      cb(null, out);
     });
 
@@ -351,7 +390,6 @@ recline.Backend.CkanInterlinkEdit = recline.Backend.CkanInterlinkEdit || {};
     
   // ### fetch
   my.fetch = function(dataset) {
-	console.log('inside custom fetch')  
     var dfd = new Deferred();
 
     my.query({}, dataset)

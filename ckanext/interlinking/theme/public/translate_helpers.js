@@ -35,7 +35,7 @@ function InterlinkHelper (resource){
         var options = {
                     resource_id: new_res_id,
                     column_name: col_name,
-                    reference_resource: mode,
+                    reference_resource: reference_resource
                 }
         return this.call_ajax(url, options, ld, cb);           
     }; 
@@ -117,8 +117,6 @@ function InterlinkHelper (resource){
         var options = {
             id: resource.id,
         }
-        console.log('options')
-        console.log(options)
         
         return $.ajax({
                 type: "POST",
@@ -189,6 +187,19 @@ function InterlinkHelper (resource){
         return url.substring(start, end);
 
     };
+    
+    // Given an array with duplicates, an array with unique values is returned
+    this.uniquesArray = function (input) {
+    	var u = {}, a = [];
+    	for(var i = 0, l = input.length; i < l; ++i){
+    		if(u.hasOwnProperty(input[i])) {
+    			continue;
+    	    }
+    	    a.push(input[i]);
+    	    u[input[i]] = 1;
+    	}
+    	return a;
+    }
 };
 
 

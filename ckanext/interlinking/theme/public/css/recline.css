@@ -50,7 +50,7 @@ body {
     padding-top: 12px;
 }
 
-
+/* Style for recline-interlinking */
 .contextMenu {
   background: #fff;
   border: 1px solid gray;
@@ -66,15 +66,23 @@ body {
   padding: 4px 4px 4px 14px;
   list-style: none;
   cursor: pointer;
-  /*background: url("images/arrow_right_blue.png") no-repeat center left;*/
+  background: url("../img/arrow_right_blue.png") no-repeat center left;
 }
 
 .contextMenu li:hover {
   color:#fff;
-  /*background: url("images/arrow_right_white.png") no-repeat center left;*/
+  background: url("../img/arrow_right_white.png") no-repeat center left;
   background-color: #4e59a4;
 }
 
 .contextMenu hr {
   margin:3px;
+}
+
+.interlinkingResult {
+    background-color: #D4D7E9 !important;
+}
+
+.interlinkingScore {
+    background-color: #EDEEF6 !important;
 }

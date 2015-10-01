@@ -4,11 +4,15 @@
         </div>
         <!-- <a data-toggle="modal" id="button" href="#windowTitleDialog" class="btn btn-primary btn-large">Click</a> -->
         
+        <ul id="interlinkingHandling" class="contextMenu" style="display:none;position:absolute">
+			    <li id="finalizeOption">{{ _('Finalize interlinking') }}</li>
+			    <li id="abortOption" class="abort">{{ _('Abort interlinking') }}</li>
+		</ul>
         <div id="saveButtons" style="float:right"> 
         	<a href="#" class="btn" id="saveClicked">Save</a> 
        		<a href="#" class="btn btn-primary" id="publishClicked">Publish</a> 
        	</div>
-		<div id="reclinetranslate" 
+		<div id="reclineinterlink" 
 			data-module="recline_interlink_preview" 
 			data-module-site_url="{{ h.dump_json(h.url('/', locale='default', qualified=true)) }}">
       
@@ -17,11 +21,11 @@
         	<div class="loading-spinner"></div>
       		<div class="left">{{ _('Loading...') }}</div>
     	</h4>
+    	
+    	    
 </div>
   
 <div id="popup"></div>
-  
-  
   
 
   {% resource 'ckanext-interlinking/edit' %}

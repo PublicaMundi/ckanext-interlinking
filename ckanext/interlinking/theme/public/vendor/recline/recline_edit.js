@@ -1748,6 +1748,7 @@ my.Field = Backbone.Model.extend({
     if (this.attributes.label === null) {
       this.set({label: this.id});
     }
+
     if (this.attributes.type.toLowerCase() in this._typeMap) {
       this.attributes.type = this._typeMap[this.attributes.type.toLowerCase()];
     }
@@ -1758,6 +1759,8 @@ my.Field = Backbone.Model.extend({
     if (!this.renderer) {
       this.renderer = this.defaultRenderers[this.get('type')];
     }
+    
+    
     this.facets = new my.FacetList();
   },
   _typeMap: {
@@ -1782,6 +1785,8 @@ my.Field = Backbone.Model.extend({
       var format = field.get('format'); 
       if (format === 'percentage') {
         return val + '%';
+      }else if(format === 'float-percentage') {
+    	  return Math.round(val*100) + '%'
       }
       return val;
     },
@@ -4097,6 +4102,7 @@ my.MultiView = Backbone.View.extend({
     var $dataViewContainer = this.el.find('.data-view-container');
     var $dataSidebar = this.el.find('.data-view-sidebar');
 
+    
     // the main views
     _.each(this.pageViews, function(view, pageName) {
       view.view.render();
@@ -4452,14 +4458,10 @@ my.SlickGrid = Backbone.View.extend({
     this.el.addClass('recline-slickgrid');
     _.bindAll(this, 'render');
     
-   //console.log('hello');
-    //console.log(this);
     this.model.records.bind('add', this.render);
     this.model.records.bind('reset', this.render);
     this.model.records.bind('remove', this.render);
     this.model.records.bind('change', this.onRecordChanged, this);
-   // this.model.on('translate-manual', this.custom);
-
     var state = _.extend({
         hiddenColumns: [],
         columnsOrder: [],
@@ -4489,7 +4491,6 @@ my.SlickGrid = Backbone.View.extend({
 
   render: function() {
     var self = this;
-
     var options = _.extend({
       enableCellNavigation: true,
       enableColumnReorder: true,
@@ -4506,7 +4507,6 @@ my.SlickGrid = Backbone.View.extend({
     // plus this way we distinguish between rendering/formatting and computed value (so e.g. sort still works ...)
     // row = row index, cell = cell index, value = value, columnDef = column definition, dataContext = full row values
     var formatter = function(row, cell, value, columnDef, dataContext) {
-        
       var field = self.model.fields.get(columnDef.id);
 
       if (field.renderer) {
@@ -4515,7 +4515,23 @@ my.SlickGrid = Backbone.View.extend({
         return value;
       }
     };
+    
+    // Hiding columns which are assisting iterlinking (e.g. *-int-results). 
+    // To do so these fields are included to the state.hiddenColumns[] array
+    //self.state.set('hiddenColumns',hiddenColumns); 
+    var hiddenColumns = []
+    for(var i=0; i < this.model.fields.length; i++){  
+    	if(this.model.fields.at(i).get("isInterlinked") === true || this.model.fields.at(i).get("hostsAllInterlinkingResults") === true)
+    		hiddenColumns.push(this.model.fields.at(i).id);
+    }
+    hiddenColumns.concat(self.state.get('hiddenColumns'));
+    hiddenColumns = int_helper.uniquesArray(hiddenColumns); 
+    self.state.set('hiddenColumns',hiddenColumns);   
+        
+    
     _.each(this.model.fields.toJSON(),function(field){
+      
+      //Define field formatter	
       var column = {
         id: field.id,
         name: field.label,
@@ -4525,11 +4541,23 @@ my.SlickGrid = Backbone.View.extend({
         rerenderOnResize: true,
         minWidth: 0,
         width: 80,
+        formatter: formatter,
         //state: field.state,
         defaultSortAsc: true,
-        //editor: Slick.Editors.Text
-        
+        //editor: Slick.Editors.Text  
       };
+
+      if (field.hostsInterlinkingResult === true)
+    	    column.cssClass = "interlinkingResult";
+      if (field.hostsInterlinkingScore === true)
+    	    column.cssClass = "interlinkingScore";
+      /*
+      if (field.type == 'percentage'){
+    	  column['formatter'] = function(row, cell, value, columnDef, dataContext){
+    		  return value;
+    	  }
+      }
+      */
         
       var widthInfo = _.find(self.state.get('columnsWidth'),function(c){return c.column === field.id;});
       if (widthInfo){
@@ -4540,7 +4568,8 @@ my.SlickGrid = Backbone.View.extend({
       if (editInfo){
         column.editor = editInfo.editor;
       }
-      columns.push(column);
+      columns.push(column);      
+      
     });
     
 
@@ -4549,6 +4578,7 @@ my.SlickGrid = Backbone.View.extend({
       return _.indexOf(self.state.get('hiddenColumns'), column.id) === -1;
     });
 
+    
     // Order them if there is ordering info on the state
     if (this.state.get('columnsOrder') && this.state.get('columnsOrder').length > 0) {
       visibleColumns = visibleColumns.sort(function(a,b){
@@ -4558,9 +4588,11 @@ my.SlickGrid = Backbone.View.extend({
         return _.indexOf(self.state.get('columnsOrder'),a.id) > _.indexOf(self.state.get('columnsOrder'),b.id) ? 1 : -1;
       });
     }
-
+    
+    /*
     // Move hidden columns to the end, so they appear at the bottom of the
     // column picker
+    //TOCHECK: Maybe remove this part 
     var tempHiddenColumns = [];
     for (var i = columns.length -1; i >= 0; i--){
       if (_.indexOf(_.pluck(visibleColumns,'id'),columns[i].id) === -1){
@@ -4568,7 +4600,8 @@ my.SlickGrid = Backbone.View.extend({
       }
     }
     columns = columns.concat(tempHiddenColumns);
-
+	*/
+    
     // Transform a model object into a row
     function toRow(m) {
       var row = {};
@@ -4645,11 +4678,9 @@ my.SlickGrid = Backbone.View.extend({
     this.grid.onCellChange.subscribe(function (e, args) {
       // We need to change the model associated value
       //
-      ////console.log(args);
       var grid = args.grid;
       var model = data.getModel(args.row);
-      //console.log(model);
-      //console.log('after model');
+
       var field = grid.getColumns()[args.cell].id;
       var v = {};
       v[field] = args.item[field];
@@ -4694,20 +4725,18 @@ my.SlickGrid = Backbone.View.extend({
 (function ($) {
   function InterlinkingColumnPicker(model, columns, grid, options) {
     var $menu;
-    var columnCheckboxes;
     var column;
-    var modelo;
+    var selectedField
     var defaults = {
       fadeSpeed:250
     };
     function init() {
       grid.onHeaderContextMenu.subscribe(handleHeaderContextMenu);
       options = $.extend({}, defaults, options);
-      //$menu = $('<ul class="dropdown-menu slick-contextmenu" style="display:none;position:absolute;z-index:20;" />').appendTo(document.body);
       
       //TODO: Make sure that it is not created twice
-      $menu = $('<ul id="interlinkingChoices" class="contextMenu" style="display:none;position:absolute;" />').appendTo(document.body);
-	      
+      $menu = $('<ul id="interlinkingChoices" class="contextMenu" style="display:none;position:absolute; z-index:1" />').appendTo(document.body);
+	  
       $menu.bind('mouseleave', function (e) {
         $(this).fadeOut(options.fadeSpeed);
       });
@@ -4717,64 +4746,111 @@ my.SlickGrid = Backbone.View.extend({
     
     function _onCompleteGetInterlinkingReferences(results){
         var results = results.responseJSON.result
-        
         $('<b>Interlink with:</b>').appendTo($menu)
         for (var res in results){
         	ref = results[res]
-        	for (var name in ref){
-        		console.log(name + ' > '+ ref[name])
-        	}
         	
         	$li = $('<li />').appendTo($menu);
-        	$li.attr('id', ref['ref-id']).text(ref['name'])
-            //$input = $('<input type="checkbox" />').data('option', 'interlink-with').attr('id','interlink-with');
-            //columnCheckboxes.push($input);
-            /*
-        	$input.appendTo($li);
-            $('<label />')
-                .text('Interlink with: ' + ref['name'])
-                .appendTo($li);
-            $('</input>').appendTo($li);    
-            */  
+        	$li.attr({'id': ref['ref-id']}).text(ref['name']).data({'option': 'interlink-with', 'reference': ref['ref-id']})
         }
     }
 
     function handleHeaderContextMenu(e, args) {
       e.preventDefault();
-      $menu.empty();
-      columnCheckboxes = [];
-      //console.log(args);
-      var $li, $input;
-
       
-      var interlinking_references = int_helper.get_interlinking_references(function() {}, _onCompleteGetInterlinkingReferences)
-      //console.log
+      if(e.target.id != ""){
+          var selectedColumnHeader = e.target;
+          console.log('case1')
+      }
+      else{
+          var selectedColumnHeader = $(e.target).parent();
+          console.log('case2')
+      }
       
+      column = args.column;
+      //console.log(selectedColumnHeader);
 
-      $menu.css('top', e.pageY - 10)
-          .css('left', e.pageX - 10)
-          .fadeIn(options.fadeSpeed);
-        column = args.column;
+      header = {}
+      header.id = args.column.id;
+      header.field = args.column.field;
+      header.name = args.column.name
+      
+      selectedColumnIndex = grid.getColumnIndex(header.id)
+      if(options.enableReOrderRow)
+      	selectedColumnIndex--;
+      if(options.enabledDelRow)
+       	selectedColumnIndex--;
+                
+      selectedField = model.fields.get(grid.getColumns()[selectedColumnIndex]);
+      console.log(selectedField)
+      
+      // This context menu apperars only for ordinary columns
+      if (	selectedField.get('hostsInterlinkingScore') === true ||
+        		selectedField.get('hostsAllInterlinkingResults') === true ||
+        		selectedField.get('isInterlinked') === true ||
+        		selectedField.get('id') === '_id'){
+          return;
+      }else if (selectedField.get("hostsInterlinkingResult") === true){
+    	    // This is a context menu with two choices: abort-interlinking and finalize-interlinking 
+    	    // It is reserved for a column which is under interlinking
+	        origColumn = grid.getColumns()[selectedColumnIndex];
+	        console.log(origColumn)
+	        // set the grid's columns as the new columns
+	        $("#interlinkingHandling")
+	           .css("top", e.pageY )
+	           .css("left", e.pageX  - 25)
+	           .show();
+	        
+	        $("#interlinkingHandling")
+	        	.bind('mouseleave', function (e) {
+	        		$(this).fadeOut(options.fadeSpeed);
+	          });
+	        
+	        $("#interlinkingHandling")
+	        	.off('click').bind('click', updateColumn);
+	
+	        $("body").one("click", function () {
+	          $("#interlinkingHandling").hide();
+	        });
+	        
+      }else{
+	      // Creating context menu for fields' heads
+	      $menu.empty();
+	      var $li, $input;
+	      var interlinking_references = int_helper.get_interlinking_references(function() {}, _onCompleteGetInterlinkingReferences)
+	      $menu.css('top', e.pageY)
+	          .css('left', e.pageX - 25)
+	          .fadeIn(options.fadeSpeed);
+	        column = args.column;
+      }
+        
     }
 
     function updateColumn(e) {
-        console.log('updatiiiing');
-        console.log(column.state);
-        //console.log('col');
-        //console.log(column);
-        
-        reference = 'Kallikratikoi Dhmoi'
-      var checkbox;
+      console.log('updatiiiing');
+       
+      if($(e.target).data('option') === 'interlink-with'){
+    	  if (typeof $(e.target).data('reference') !== "undefined") {
+    		  reference = $(e.target).data('reference')
+    		  console.log(column)
+    		  model.trigger('interlink-with', column, reference);
+    	  }  
+      }else if($(e.target).data('option') === 'finalize-interlinking'){
+    	  model.trigger('finalize-interlinking', column);
+      }else if($(e.target).data('option') === 'abort-interlinking'){
+    	  model.trigger('abort-interlinking', column);
+      }
+
+      /*
+       * 
+       console.log($(e.target).data('option'))  
       if ($(e.target).data('option') === 'translate-no' ){
     	  alert($(e.target).data('option'))
           //alert('non translatable');
           model.trigger('translate-no', column);
 
       }
-      else if ($(e.target).data('option') === 'interlink-with'){
-    	  model.trigger('interlink-with', column, reference); 
-      }
-
+       * 
       if ($(e.target).data('option') === 'autoresize') {
         var checked;
         if ($(e.target).is('li')){
@@ -4794,7 +4870,7 @@ my.SlickGrid = Backbone.View.extend({
         options.state.set({fitColumns:checked});
         return;
       }
-
+	*/
     }
     init();
   }
@@ -4803,129 +4879,6 @@ my.SlickGrid = Backbone.View.extend({
 })(jQuery);
 
 
-
-/*
-* Context menu for the column picker, adapted from
-* http://mleibman.github.com/SlickGrid/examples/example-grouping
-*
-*/
-/*
-(function ($) {
-  function SlickColumnPicker(columns, grid, options) {
-    var $menu;
-    var columnCheckboxes;
-
-    var defaults = {
-      fadeSpeed:250
-    };
-
-    function init() {
-      grid.onHeaderContextMenu.subscribe(handleHeaderContextMenu);
-      options = $.extend({}, defaults, options);
-
-      $menu = $('<ul class="dropdown-menu slick-contextmenu" style="display:none;position:absolute;z-index:20;" />').appendTo(document.body);
-
-      $menu.bind('mouseleave', function (e) {
-        $(this).fadeOut(options.fadeSpeed);
-      });
-      $menu.bind('click', updateColumn);
-
-    }
-
-    function handleHeaderContextMenu(e, args) {
-      e.preventDefault();
-      $menu.empty();
-      columnCheckboxes = [];
-
-      var $li, $input;
-      for (var i = 0; i < columns.length; i++) {
-        $li = $('<li />').appendTo($menu);
-        $input = $('<input type="checkbox" />').data('column-id', columns[i].id).attr('id','slick-column-vis-'+columns[i].id);
-        columnCheckboxes.push($input);
-
-        if (grid.getColumnIndex(columns[i].id) !== null) {
-          $input.attr('checked', 'checked');
-        }
-        $input.appendTo($li);
-        $('<label />')
-            .text(columns[i].name)
-            .attr('for','slick-column-vis-'+columns[i].id)
-            .appendTo($li);
-      }
-      $('<li/>').addClass('divider').appendTo($menu);
-      $li = $('<li />').data('option', 'autoresize').appendTo($menu);
-      $input = $('<input type="checkbox" />').data('option', 'autoresize').attr('id','slick-option-autoresize');
-      $input.appendTo($li);
-      $('<label />')
-          .text('Force fit columns')
-          .attr('for','slick-option-autoresize')
-          .appendTo($li);
-      if (grid.getOptions().forceFitColumns) {
-        $input.attr('checked', 'checked');
-      }
-
-      $menu.css('top', e.pageY - 10)
-          .css('left', e.pageX - 10)
-          .fadeIn(options.fadeSpeed);
-    }
-
-    function updateColumn(e) {
-      //console.log('update column');
-      var checkbox;
-      //console.log(column);
-      //console.log(columns);
-      if ($(e.target).data('option') === 'autoresize') {
-        var checked;
-        if ($(e.target).is('li')){
-            checkbox = $(e.target).find('input').first();
-            checked = !checkbox.is(':checked');
-            checkbox.attr('checked',checked);
-        } else {
-          checked = e.target.checked;
-        }
-
-        if (checked) {
-          grid.setOptions({forceFitColumns:true});
-          grid.autosizeColumns();
-        } else {
-          grid.setOptions({forceFitColumns:false});
-        }
-        options.state.set({fitColumns:checked});
-        return;
-      }
-
-      if (($(e.target).is('li') && !$(e.target).hasClass('divider')) ||
-            $(e.target).is('input')) {
-        if ($(e.target).is('li')){
-            checkbox = $(e.target).find('input').first();
-            checkbox.attr('checked',!checkbox.is(':checked'));
-        }
-        var visibleColumns = [];
-        var hiddenColumnsIds = [];
-        $.each(columnCheckboxes, function (i, e) {
-          if ($(this).is(':checked')) {
-            visibleColumns.push(columns[i]);
-          } else {
-            hiddenColumnsIds.push(columns[i].id);
-          }
-        });
-
-        if (!visibleColumns.length) {
-          $(e.target).attr('checked', 'checked');
-          return;
-        }
-
-        grid.setColumns(visibleColumns);
-        options.state.set({hiddenColumns:hiddenColumnsIds});
-      }
-    }
-    init();
-  }
-  // Slick.Controls.ColumnPicker
-    $.extend(true, window, { Slick:{ Controls:{ ColumnPicker:SlickColumnPicker }}});
-})(jQuery);
-*/
-/*jshint multistr:true */
 
 this.recline = this.recline || {};
 this.recline.View = this.recline.View || {};
