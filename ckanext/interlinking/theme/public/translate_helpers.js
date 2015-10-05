@@ -22,7 +22,7 @@ function InterlinkHelper (resource){
 
     this.update = function(options, ld, cb) {
         var options = options || {};
-        var col_name = options.column_name;
+        var col_name = options.column_id;
         var reference_resource = options.reference_resource;
         var self = this;
         var url = resource.endpoint + '/3/action/interlinking_resource_update';
@@ -37,18 +37,20 @@ function InterlinkHelper (resource){
                     column_name: col_name,
                     reference_resource: reference_resource
                 }
+        console.log(url)
+        console.log(options)
         return this.call_ajax(url, options, ld, cb);           
     }; 
 
     this.delete = function(options, ld, cb) {
         var options = options || {};
-        var col_name = options.column;
-
+        var col_name = options.column_id;
+        //console.log(col_name)
         var self = this;
 
         var url = resource.endpoint + '/3/action/interlinking_resource_delete';
         
-        var new_res_id = resource.being_interlinked_with;
+        var new_res_id = resource.temp_interlinking_resource;
         
         if (col_name !== undefined){
 	        var options = {
@@ -61,27 +63,33 @@ function InterlinkHelper (resource){
                 resource_id: new_res_id
             }
         }
+        
+        console.log(url)
+        console.log(options)
         return self.call_ajax(url, options, ld, cb);    
     };
     
     this.publish = function(options, ld, cb) {
         var url = resource.endpoint + '/3/action/interlinking_resource_finalize';
-        
         var res_id = resource.id;
 
         var options = {
             resource_id:res_id,
         }
-        console.log('publish')    
+        console.log(url)
+        console.log(options)   
+        return self.call_ajax(url, options, ld, cb);
     };
 
     this.finalize = function(options, ld, cb) {
         var url = resource.endpoint + '/3/action/interlinking_resource_finalize';
-        
-        var res_id = resource.id;
+        var res_id = resource.temp_interlinking_resource;
+        var col_name = options.column_id;
+        var return_url = options.return_url;
 
         var options = {
-            resource_id:res_id,
+            resource_id: res_id,
+            column_name: col_name,
         }
         return this.call_ajax(url, options, ld, cb);    
     };
@@ -90,14 +98,12 @@ function InterlinkHelper (resource){
     	var url = resource.endpoint + '/3/action/interlinking_get_reference_resources';
     	options = {}
     	return this.call_ajax(url, options, ld, cb);
-    	//return this.call_get(url)
     },
 
 
     this.show =  function(resource, cb) {
 
         var url = resource.endpoint + '/3/action/datastore_search';
-        
         var options = {
             id: resource.id,
         }
@@ -129,6 +135,8 @@ function InterlinkHelper (resource){
     },
     
     this.call_ajax = function(url, options, ld, cb) {
+    	//console.log('----------------------AJAX-----------------------')
+    	//console.log(options)		
         return $.ajax({
             type: "POST",
             url: url,

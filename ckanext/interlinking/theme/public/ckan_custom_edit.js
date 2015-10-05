@@ -40,10 +40,11 @@ if (isNodeModule) {
   my.Client.prototype.datastoreQuery = function(queryObj, cb) {
     var actualQuery = my._normalizeQuery(queryObj);
     var self = this;
-        
+     //console.log('--check 1--')   
     this.action('datastore_search', actualQuery, function(err, original_res_results) {
       if (err) {
         cb(err);
+        //console.log('--check 2--')
         return;
       }
       var interlinkingQuery = {
@@ -52,10 +53,12 @@ if (isNodeModule) {
           sort: actualQuery.sort,
           resource_id: queryObj.interlinking_resource,
       }
-      
+           
+      //console.log('--check 3--')
       self.action('datastore_search', interlinkingQuery, function(err2, interlink_res_results) {
           if (err2) {
             cb(err2);
+            //console.log('--check 4--')
             return;
           }
 
@@ -64,27 +67,33 @@ if (isNodeModule) {
 	        field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
 	        return field;
 	      });
+	      //console.log('--check 5--')
 	      var interlink_res_fields = _.map(interlink_res_results.result.fields, function(field) {
 	        field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
 	        return field;
 	      });
-
+	      //console.log('--check 6--')
 	        var records = [];
-	        var new_fields = []
+	        var new_fields = [];
 	        var fields_temp = interlink_res_fields.slice(0);
+	        var interlinked_field_ids = [];
 
 	        // For each original field, add it to final fields, and if you find an 
 	        // interlinking field with the same name (but not '_id'), add it after the original one
 	        original_res_fields.forEach(function(fld, idx1){
 	        	var match_found = false;
 	            fields_temp.forEach(function(fld2, idx2){
-	                var int_col_id = fld2.id + '-int';
+	                var int_col_id = fld2.id + '_int';
 	                
 	                if (fld.id == fld2.id && fld.id !== '_id'){
 	                	match_found = true;
+	                	interlinked_field_ids.push(fld.id)
 	                	// The original fields metadata are updated to note that it is under interlinking
 	                	var new_fld = fld
+	                	// flag declaring that is under ongoing interlinking
 	                	new_fld.isInterlinked = true;
+	                	// The name of the column in which it corresponds in the datastore
+	                	new_fld.dst_column_name = fld.id
 	                	new_fields.push(new_fld);
 	                	
 	                	// This is the field which the users sees. It contains the best interlinking result,
@@ -93,15 +102,17 @@ if (isNodeModule) {
 	                            'id': int_col_id,
 	                            'label': fld2.id,
 	                            'type': 'text',
-	                            'hostsInterlinkingResult': true
+	                            // Flag declaring that it hosts interlinking results
+	                            'hostsInterlinkingResult': true,
+	                            'dst_column_name': fld2.id
 	                        };
 	                    new_fields.push(new_fld);
 	                    
 	                    // This field contains the score of the previous one (best result or user's choice).
 	                    new_fld = {
-	                            'id': fld2.id + '-int-score',
+	                            'id': fld2.id + '_int_score',
 	                    		'label': 'score',
-	                            'type': 'number',
+	                            'type': 'test',
 	                            'format': 'float-percentage',
 	                            'hostsInterlinkingScore': true
 	                            // TODO: create a custom renderer	
@@ -110,35 +121,39 @@ if (isNodeModule) {
 	                    
 	                    // This field contains all results along with their scores.
 	                    new_fld = {
-	                            'id': fld2.id + '-int-results',
+	                            'id': fld2.id + '_int_results',
 	                            'type': 'text',
 	                            'hostsAllInterlinkingResults': true
 	                        };
 	                    new_fields.push(new_fld);
 	                }
 	            });
+	            //console.log('--check 8--')
 	            if(!match_found){
 	            	new_fields.push(fld);
 	            }
+
 	        });
 	        // For each original record, get the respective value of the interlinking records
+
 	        original_res_results.result.records.forEach(function(rc, idx){
 	        	interlink_res_fields.forEach(function(fld2, idx2) {
-	                    if (fld2['id'] !== '_id'){
-	                    	var int_col_id = fld2.id + '-int';
-	                    	var int_score_col_name = fld2.id + '-int-score';
-	                    	var int_results_col_name = fld2.id + '-int-results';
-
-	                        var val_int = interlink_res_results.result.records[idx][fld2['id']];
-	                        var val_int_score = interlink_res_results.result.records[idx][(fld2['id'] + '-score')];
-	                        var val_int_results = interlink_res_results.result.records[idx][(fld2['id'] + '-results')];
-
-	                        rc[int_col_id] = val_int; 
-	                        rc[int_score_col_name] = val_int_score; 
-	                        rc[int_results_col_name] = val_int_results; 
-	                    }
-	                });
-	                records.push(rc);
+                    if (fld2['id'] !== '_id' & interlinked_field_ids.indexOf(fld2['id']) >= 0){
+                    	var int_col_id = fld2.id + '_int';
+                    	var int_score_col_name = fld2.id + '_int_score';
+                    	var int_results_col_name = fld2.id + '_int_results';
+                    	
+                    	var val_int = interlink_res_results.result.records[idx][fld2['id']];
+                        var val_int_score = interlink_res_results.result.records[idx][(fld2['id'] + '_score')];
+                        var val_int_results = interlink_res_results.result.records[idx][(fld2['id'] + '_results')];
+                        
+                        rc[int_col_id] = val_int; 
+                        rc[int_score_col_name] = val_int_score; 
+                        rc[int_results_col_name] = val_int_results; 
+                   }
+                    
+                });
+                records.push(rc);
 	        });
 	        var out = {
 	            total: original_res_results.result.total,
@@ -153,34 +168,42 @@ if (isNodeModule) {
   };
 
   my.Client.prototype.datastoreUpdate = function(queryObj, cb) {
+	//console.log(queryObj) 
     var actualQuery = my._normalizeQuery(queryObj);
-    
     actualQuery['method'] = 'upsert';
     actualQuery['allow_update_with_id'] = true;
     actualQuery['force'] = true;
     var updates = queryObj.updates;
-    console.log('QueryObj');
-    console.log(queryObj);
+    //console.log('QueryObj');
+    //console.log(queryObj);
     actualQuery['resource_id'] = queryObj.interlinking_resource;
+    //console.log(actualQuery)
     var records = [];
-    var extra = '- il'; 
+    var extra = '_int'; 
     var new_updates = [];
     updates.forEach(function(upd, idx){
-        console.log(upd);
         var it = {};
         it['_id'] = upd['_id'];
         for (key in upd){
+        	console.log('--------------------------------------------------------')
+            console.log('updates[' +key+'] = '+ upd[key]);
+ 
             var pos = key.indexOf(extra);
             if (pos > -1){
                 var new_key = key.substring(0,pos);
+                //console.log('NEW KEY++++++++++++++++++++++++')
+                console.log('updates[' +key+'] = '+ upd[key]);
                 it[new_key] = upd[key];
             }
         }
+        console.log(it)
         new_updates.push(it);
     });
+    console.log(new_updates)
     actualQuery['records'] = new_updates;
-    console.log('Actualquery');
+    //console.log('Actualquery');
     console.log(actualQuery);
+    
     this.action('datastore_upsert', actualQuery, function(err, results) {
       if (err) {
         cb(err);
@@ -201,6 +224,7 @@ if (isNodeModule) {
       };
       cb(null, out);
     });
+    
   };
 
   my.Client.prototype.datastoreSqlQuery = function(sql, cb) {
@@ -390,8 +414,14 @@ recline.Backend.CkanInterlinkEdit = recline.Backend.CkanInterlinkEdit || {};
     
   // ### fetch
   my.fetch = function(dataset) {
+	  /*
+	  console.log('------inside FETCH!!!------')
+	  console.log('dataset variable inside fetch')
+	  console.log(dataset)
+	  console.log(dataset.id)
+      console.log(dataset.temp_interlinking_resource)
+      */
     var dfd = new Deferred();
-
     my.query({}, dataset)
       .done(function(data) {
         dfd.resolve({
@@ -407,6 +437,8 @@ recline.Backend.CkanInterlinkEdit = recline.Backend.CkanInterlinkEdit || {};
   };
 
   my.query = function(queryObj, dataset) {
+	  //console.log('------inside QUERY!!!------')
+	  //console.log(queryObj)
     var dfd = new Deferred()
       , wrapper
       ;
@@ -423,9 +455,15 @@ recline.Backend.CkanInterlinkEdit = recline.Backend.CkanInterlinkEdit || {};
       dataset.id = out.resource_id;
       wrapper = new CKAN.Client(out.endpoint);
     }
-
+    /*
+    console.log('dataset variable inside QUERY')
+    console.log(dataset)
+    console.log(dataset.id)
+    console.log(dataset.temp_interlinking_resource)*/
     queryObj.resource_id = dataset.id;
     queryObj.interlinking_resource = dataset.temp_interlinking_resource; 
+    
+    //queryObj.interlinking_resource = dataset.being_interlinked_with; 
     
     wrapper.datastoreQuery(queryObj, function(err, out) {
       if (err) {
@@ -450,7 +488,8 @@ recline.Backend.CkanInterlinkEdit = recline.Backend.CkanInterlinkEdit || {};
       queryObj.resource_id = dataset.id;
       //queryObj.translation_column = dataset.translation_column;
       //queryObj.translation_language = dataset.translation_language;
-     queryObj.interlinking_resource = dataset.being_interlinked_with; 
+     queryObj.interlinking_resource = dataset.temp_interlinking_resource; 
+     //console.log(queryObj)
      wrapper.datastoreUpdate(queryObj,function(err, out){
      if (err) {
          console.log(err);

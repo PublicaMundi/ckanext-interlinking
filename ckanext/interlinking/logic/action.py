@@ -94,7 +94,7 @@ def interlinking_resource_create(context, data_dict):
     temp_interlinking_resource = new_res.get('id')    
     
     # Update original resource metadata
-    res = p.toolkit.get_action('resource_show')(context)
+    res = p.toolkit.get_action('resource_show')(context, res)
     res['temp_interlinking_resource'] = temp_interlinking_resource
     res['on_interlinking_process'] = True
     res = p.toolkit.get_action('resource_update')(context, res)
@@ -205,7 +205,7 @@ def interlinking_resource_delete(context, data_dict):
         columns = json.dumps(columns)
         
         ## new way updating resource
-        res = p.toolkit.get_action('resource_show')(context)
+        res = p.toolkit.get_action('resource_show')(context, res)
         res['interlinking_columns_status'] = columns
         res = p.toolkit.get_action('resource_update')(context, res)
         
@@ -222,7 +222,7 @@ def interlinking_resource_delete(context, data_dict):
                 'interlinking_columns':res.get('interlinking_columns'),
                 })
         """
-        filters = {col_name:'*', col_name+'-score':'*', col_name+'-results':'*'}
+        filters = {col_name:'*', col_name+'_score':'*', col_name+'_results':'*'}
         return p.toolkit.get_action('datastore_delete')(context, {'resource_id': data_dict.get('resource_id'), 'filters':filters, 'force':True})
 
     # Delete datastore table
@@ -235,8 +235,9 @@ def interlinking_resource_delete(context, data_dict):
     if not temp_interlinking_resource:
         raise p.toolkit.ValidationError('Original resource has no interlinking metadata. Something went wrong...')
 
-    upd_original_res = p.toolkit.get_action('resource_show')(context)
+    upd_original_res = p.toolkit.get_action('resource_show')(context, original_res)
     upd_original_res['on_interlinking_process'] = False
+    del upd_original_res['temp_interlinking_resource']
     upd_original_res = p.toolkit.get_action('resource_update')(context, upd_original_res)
     
     """
@@ -264,8 +265,11 @@ def interlinking_resource_finalize(context, data_dict):
         raise p.toolkit.ValidationError(errors)
 
     #package = p.toolkit.get_action('dataset_show')(context, {'id': data_dict.get('package_id')})
-    original_resource = data_dict.get('resource_id')
-    res = p.toolkit.get_action('resource_show')(context, {'id': original_resource})
+    interlinked_resource_id = data_dict.get('resource_id')
+    int_res = p.toolkit.get_action('resource_show')(context, {'id': interlinked_resource_id})
+    original_resource_id = int_res.get('interlinking_parent_id')
+    res = p.toolkit.get_action('resource_show')(context, {'id': original_resource_id})
+    pprint.pprint(res)
 
     on_interlinking_process = res.get('on_interlinking_process')
     if not on_interlinking_process or on_interlinking_process == False:
@@ -276,7 +280,7 @@ def interlinking_resource_finalize(context, data_dict):
        
     STEP = 100
     offset = 0
-    original_ds = p.toolkit.get_action('datastore_search')(context, {'resource_id':original_resource, 'offset': offset, 'sort':'_id'})
+    original_ds = p.toolkit.get_action('datastore_search')(context, {'resource_id':original_resource_id, 'offset': offset, 'sort':'_id'})
     total = original_ds.get('total')
     
     #Picking the interlinked columns plus the '_id' one
@@ -295,7 +299,7 @@ def interlinking_resource_finalize(context, data_dict):
                 
         updated_ds = p.toolkit.get_action('datastore_upsert')(context,
                 {
-                    'resource_id': original_resource,
+                    'resource_id': original_resource_id,
                     'allow_update_with_id':True,
                     'force': True,
                     'records': recs
@@ -338,11 +342,11 @@ def _initialize_columns(context, col_name, ds, total):
                 'type': 'text'}
     fields.append(main_column)
     # Build score column. It keeps the score of the main column's interlinking term
-    score_column = {'id': col_name + '-score',
+    score_column = {'id': col_name + '_score',
                  'type': 'numeric'}
     fields.append(score_column)
     # Build results column. It keeps all the returned results and their respective scores as a json object.
-    results_column = {'id': col_name + '-results',
+    results_column = {'id': col_name + '_results',
                  'type': 'text'}
     fields.append(results_column)
     
@@ -414,8 +418,8 @@ def _interlink_column(context, res, col_name, original_ds, new_ds, reference):
                 
             nrec = {'_id':rec.get('_id'), 
                     col_name: best_suggestion['term'], 
-                    col_name+'-score': best_suggestion['score'],
-                    col_name+'-results': json.dumps(suggestions)}
+                    col_name+'_score': best_suggestion['score'],
+                    col_name+'_results': json.dumps(suggestions)}
             nrecs.append(nrec)
              
         ds = p.toolkit.get_action('datastore_upsert')(context,

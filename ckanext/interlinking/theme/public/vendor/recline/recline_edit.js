@@ -4516,17 +4516,20 @@ my.SlickGrid = Backbone.View.extend({
       }
     };
     
-    // Hiding columns which are assisting iterlinking (e.g. *-int-results). 
+    // Hiding columns which are assisting iterlinking (e.g. *_int-results). 
     // To do so these fields are included to the state.hiddenColumns[] array
     //self.state.set('hiddenColumns',hiddenColumns); 
     var hiddenColumns = []
+    /*
     for(var i=0; i < this.model.fields.length; i++){  
-    	if(this.model.fields.at(i).get("isInterlinked") === true || this.model.fields.at(i).get("hostsAllInterlinkingResults") === true)
+    	if(this.model.fields.at(i).get("isInterlinked") === true || 
+    			this.model.fields.at(i).get("hostsAllInterlinkingResults") === true)
     		hiddenColumns.push(this.model.fields.at(i).id);
     }
     hiddenColumns.concat(self.state.get('hiddenColumns'));
     hiddenColumns = int_helper.uniquesArray(hiddenColumns); 
     self.state.set('hiddenColumns',hiddenColumns);   
+    */
         
     
     _.each(this.model.fields.toJSON(),function(field){
@@ -4726,12 +4729,16 @@ my.SlickGrid = Backbone.View.extend({
   function InterlinkingColumnPicker(model, columns, grid, options) {
     var $menu;
     var column;
-    var selectedField
+    var similarityResults = {};
+    var selectedColumnIndex;
+    var selectedField;
+    
     var defaults = {
       fadeSpeed:250
     };
     function init() {
       grid.onHeaderContextMenu.subscribe(handleHeaderContextMenu);
+      grid.onClick.subscribe(handleCellClick);
       options = $.extend({}, defaults, options);
       
       //TODO: Make sure that it is not created twice
@@ -4754,21 +4761,73 @@ my.SlickGrid = Backbone.View.extend({
         	$li.attr({'id': ref['ref-id']}).text(ref['name']).data({'option': 'interlink-with', 'reference': ref['ref-id']})
         }
     }
+    
+    //This function handles clicks on columns which contain interlinking results
+    function handleCellClick(e, args){
+        e.preventDefault();
+        selctedCell = args;
+    	var fields = model.fields;
+        var fieldID = grid.getColumns()[selctedCell.cell].field;
+        selectedField = model.fields.get(fieldID); 
+        
+    	if(selectedField.get("hostsInterlinkingResult")){
+    		// A context menu is loaded containing other alternatives    		
+    		var originalFieldId = fields.at(fields.indexOf(selectedField) - 1).id;
+    		var scoreFieldId = fields.at(fields.indexOf(selectedField) + 1).id;
+    		var resultsFieldId = fields.at(fields.indexOf(selectedField) + 2).id;
+            var ul = $("#termsMenu");
+            ul.empty();
+            var originalValue = model.records.at(selctedCell.row).get(originalFieldId)
+            var otherResults = JSON.parse(model.records.at(selctedCell.row).get(resultsFieldId))
+            
+            //sorting results
+            otherResults.sort(_compareInterlinkingResults)
+            
+            // Creating options context menu
+            ul.append('<b>Choices:</b>')
+            // Adding the original value
+            ul.append('<li id="originalOption">Original Value: ' + originalValue + '</li>')
+            if(otherResults.length > 0){
+            	ul.append('<hr />')
+            }
+            for (var i=0; i < otherResults.length; i++){
+            	ul.append('<li id="termOption" term="' + otherResults[i].term + '" score="' + otherResults[i].score + '">' +
+            			otherResults[i].term + "   (score: "+ Math.round(otherResults[i].score*100) +"%)" + "</li>");
+            }
+            //ul.append('<hr /><li id="finalizeOption">Finalize interlinking</li>');
+            ul.append('<hr /><li id="abortOption" class="abort">Abort interlinking</li>');
+            
+            $("#termsMenu")
+	        	.css("top", e.pageY)
+	        	.css("left", e.pageX)
+	        	.show();
+            
+        	$("body").click(function(e) {
+        	    if (!$(e.target).hasClass("slick-cell")){
+        	    	$("#termsMenu").hide();
+        	    }
+        	});
+ 
+    	} else{
+            $("body").one("click", function () {
+                $("#termsMenu").hide();
+             });
+    	}
+    	
+    }
+    
 
     function handleHeaderContextMenu(e, args) {
       e.preventDefault();
       
       if(e.target.id != ""){
           var selectedColumnHeader = e.target;
-          console.log('case1')
       }
       else{
           var selectedColumnHeader = $(e.target).parent();
-          console.log('case2')
       }
       
       column = args.column;
-      //console.log(selectedColumnHeader);
 
       header = {}
       header.id = args.column.id;
@@ -4782,7 +4841,6 @@ my.SlickGrid = Backbone.View.extend({
        	selectedColumnIndex--;
                 
       selectedField = model.fields.get(grid.getColumns()[selectedColumnIndex]);
-      console.log(selectedField)
       
       // This context menu apperars only for ordinary columns
       if (	selectedField.get('hostsInterlinkingScore') === true ||
@@ -4794,7 +4852,6 @@ my.SlickGrid = Backbone.View.extend({
     	    // This is a context menu with two choices: abort-interlinking and finalize-interlinking 
     	    // It is reserved for a column which is under interlinking
 	        origColumn = grid.getColumns()[selectedColumnIndex];
-	        console.log(origColumn)
 	        // set the grid's columns as the new columns
 	        $("#interlinkingHandling")
 	           .css("top", e.pageY )
@@ -4825,18 +4882,104 @@ my.SlickGrid = Backbone.View.extend({
       }
         
     }
+    
+    $("#termsMenu").off('click').click(function (e) {
+    	if (!$(e.target).is("li")) {
+            return;
+        }  
+    	if (!grid.getEditorLock().commitCurrentEdit()) {
+            return;
+        }
+    	
+    	var fields = model.fields;
+    	var row = selctedCell.row;
+    	var col = selctedCell.cell;
+    	var record = Object.create(model.records.models[row]);
+		var intFieldId = selectedField.id;
+		var originalFieldId = fields.at(fields.indexOf(selectedField) - 1).id;
+		var scoreFieldId = fields.at(fields.indexOf(selectedField) + 1).id;
+		var resultsFieldId = fields.at(fields.indexOf(selectedField) + 2).id;
+		
+		var originalValue = model.records.at(selctedCell.row).get(originalFieldId)
+        var otherResults = JSON.parse(model.records.at(selctedCell.row).get(resultsFieldId))
+				
+    	if (e.target.id == "originalOption"){
+    		var originalValue = model.records.at(row).get(originalFieldId)
+    		record.set(intFieldId, originalValue);
+    		record.set(scoreFieldId, '');    		
+        	grid.getData().updateItem(record,row);
+        	grid.updateRow(row);
+    		grid.render();
+    	}else if (e.target.id == "termOption"){
+    		record.set(intFieldId, $(e.target).attr('term'));
+    		//TODO: instead of updating score field with a string (80%), update it with a value 
+    		//(e.g. 0.8) and make sure that it is properly handled by the column handler.
+    		record.set(scoreFieldId, ($(e.target).attr('score')*100)+"%");
+        	grid.getData().updateItem(record,row);
+        	grid.updateRow(row);
+    		grid.render();
+    	}else if (e.target.id == "abortOption"){
+    		/*
+    		var newColumns = grid.getColumns().slice(0);
+    		var originalColumn = Object.create(grid.getColumns()[col]);
+    		// The original column is created copying the target interliked one and 
+    		//changing fields "id", "name", "field" 
+    		originalColumn.id = grid.getColumns()[col].id.substr(0,grid.getColumns()[col].id.length -4);
+    		originalColumn.name = grid.getColumns()[col].name.substr(0,grid.getColumns()[col].name.length -4);
+    		originalColumn.field = grid.getColumns()[col].field.substr(0,grid.getColumns()[col].field.length -4);
+    		originalColumn.cssClass = "";
+    		// The original column replaces both the interlinked one and the one hosting scores
+    		newColumns.splice(col, 2, originalColumn);    	   
+    	    grid.setColumns(newColumns);
+    	    
+    	    // Now we handle the model removing the interlinked results field and the 
+    	    //interliking scores one.
+    	    fields.remove([{id: intFieldId},{id: scoreFieldId}]);
+    	    var originalField = fields.get(originalColumn.field)
+    	    // deleting attributes related with interlinking
+    	    originalField.set("isInterlinked", false);
+    	    originalField.set("interlinkRefDataCategory", null);
+    		refreshCSS(model.fields);
+    		//TODO change refreshCSS make it working with fields list
+    		*/
+    	}/*else if (e.target.id == "finalizeOption"){
+    		var newColumns = grid.getColumns().slice(0);
+    		var interlinkedColumn = Object.create(grid.getColumns()[col]);
+    		var originalField = fields.at(fields.indexOf(selectedField) - 1);
+    		
+    		interlinkedColumn.name = interlinkedColumn.name.substr(0,interlinkedColumn.name.length -4);
+    		interlinkedColumn.id = interlinkedColumn.id.substr(0,interlinkedColumn.id.length -4);
+    		interlinkedColumn.cssClass = "";
+    		
+    		newColumns.splice(col, 2, interlinkedColumn);
+    		grid.setColumns(newColumns);
+    		
+    		fields.remove([{id: originalField.id}]);
+    		fields.remove([{id: scoreFieldId}]);
+    		
+    		//fields.get(intFieldId).set({id: "id"});
+    		//interlinkedColumn.field = interlinkedColumn.field.substr(0,interlinkedColumn.field.length -4);
+    		    		
+    		fields.get(intFieldId).set("hostsInterlinkingResults", false);
+    		fields.get(intFieldId).set("interlinkRefDataCategory", null);
+    		refreshCSS(model.fields);
+    		
+    	}
+    	*/
+    });
 
     function updateColumn(e) {
-      console.log('updatiiiing');
+      //console.log('updatiiiing');
        
       if($(e.target).data('option') === 'interlink-with'){
     	  if (typeof $(e.target).data('reference') !== "undefined") {
     		  reference = $(e.target).data('reference')
-    		  console.log(column)
     		  model.trigger('interlink-with', column, reference);
     	  }  
+    	  
       }else if($(e.target).data('option') === 'finalize-interlinking'){
     	  model.trigger('finalize-interlinking', column);
+    	  
       }else if($(e.target).data('option') === 'abort-interlinking'){
     	  model.trigger('abort-interlinking', column);
       }
@@ -4871,6 +5014,10 @@ my.SlickGrid = Backbone.View.extend({
         return;
       }
 	*/
+    }
+    
+    function _compareInterlinkingResults(a, b){
+    	return -(a.score - b.score)
     }
     init();
   }

@@ -8,9 +8,12 @@
 			    <li id="finalizeOption">{{ _('Finalize interlinking') }}</li>
 			    <li id="abortOption" class="abort">{{ _('Abort interlinking') }}</li>
 		</ul>
+		<ul id="termsMenu" class="contextMenu" style="display:none;position:absolute">
+		</ul>
         <div id="saveButtons" style="float:right"> 
         	<a href="#" class="btn" id="saveClicked">Save</a> 
-       		<a href="#" class="btn btn-primary" id="publishClicked">Publish</a> 
+       		<a href="#" class="btn btn-primary" id="finalizeClicked">{{ _('Finalize Interlinking') }}</a> 
+       		<a href="#" class="btn btn-primary" id="goResourcesClicked">Go to Resources</a>
        	</div>
 		<div id="reclineinterlink" 
 			data-module="recline_interlink_preview" 

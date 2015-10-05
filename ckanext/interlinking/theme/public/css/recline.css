@@ -69,10 +69,21 @@ body {
   background: url("../img/arrow_right_blue.png") no-repeat center left;
 }
 
+.contextMenu li.abort {
+  padding: 4px 4px 4px 14px;
+  list-style: none;
+  cursor: pointer;
+  background: url("../img/arrow_right_red.png") no-repeat center left;
+}
+
 .contextMenu li:hover {
   color:#fff;
   background: url("../img/arrow_right_white.png") no-repeat center left;
   background-color: #4e59a4;
+}
+
+.contextMenu li.abort:hover{
+	background-color: #C43210 !important;
 }
 
 .contextMenu hr {
