@@ -1802,7 +1802,14 @@ my.Field = Backbone.Model.extend({
         }
       } else if (format == 'plain') {
         return val;
-      } else {
+      } else if(format === 'float-percentage') {
+    	  if (!isNaN(val) && val.toString().indexOf('.') != -1){
+    		  return Math.round(val*100) + '%'
+    	  }else{
+    		  return val
+    	  }
+    	  
+      }else {
         // as this is the default and default type is string may get things
         // here that are not actually strings
         if (val && typeof val === 'string') {
@@ -4518,8 +4525,8 @@ my.SlickGrid = Backbone.View.extend({
     
     // Hiding columns which are assisting iterlinking (e.g. *_int-results). 
     // To do so these fields are included to the state.hiddenColumns[] array
-    //self.state.set('hiddenColumns',hiddenColumns); 
     var hiddenColumns = []
+    
     /*
     for(var i=0; i < this.model.fields.length; i++){  
     	if(this.model.fields.at(i).get("isInterlinked") === true || 
@@ -4530,7 +4537,6 @@ my.SlickGrid = Backbone.View.extend({
     hiddenColumns = int_helper.uniquesArray(hiddenColumns); 
     self.state.set('hiddenColumns',hiddenColumns);   
     */
-        
     
     _.each(this.model.fields.toJSON(),function(field){
       
@@ -4906,7 +4912,7 @@ my.SlickGrid = Backbone.View.extend({
     	if (e.target.id == "originalOption"){
     		var originalValue = model.records.at(row).get(originalFieldId)
     		record.set(intFieldId, originalValue);
-    		record.set(scoreFieldId, '');    		
+    		record.set(scoreFieldId, '-');    		
         	grid.getData().updateItem(record,row);
         	grid.updateRow(row);
     		grid.render();
@@ -4914,7 +4920,10 @@ my.SlickGrid = Backbone.View.extend({
     		record.set(intFieldId, $(e.target).attr('term'));
     		//TODO: instead of updating score field with a string (80%), update it with a value 
     		//(e.g. 0.8) and make sure that it is properly handled by the column handler.
-    		record.set(scoreFieldId, ($(e.target).attr('score')*100)+"%");
+    		//record.set(scoreFieldId, $(e.target).attr('score'));
+    		// percentage
+    		//record.set(scoreFieldId, Math.round($(e.target).attr('score')*100) + '%');
+    		record.set(scoreFieldId, $(e.target).attr('score'));
         	grid.getData().updateItem(record,row);
         	grid.updateRow(row);
     		grid.render();

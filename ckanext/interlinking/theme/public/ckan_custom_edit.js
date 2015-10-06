@@ -40,8 +40,82 @@ if (isNodeModule) {
   my.Client.prototype.datastoreQuery = function(queryObj, cb) {
     var actualQuery = my._normalizeQuery(queryObj);
     var self = this;
-     //console.log('--check 1--')   
+     //console.log('--check 1--') 
+     //console.log(actualQuery)
+     
+     /*When it comes to sorting a few things have to be done:
+      *  a)Determine if the sorting field refers to the original or the temp_interl resource
+      *  b)If the field refers to the temp_interl resource it has to be renamed properly   
+      */
+          
+     var originalQuery;
+     var interlinkedSortQueryPart;
+     // This variable determines if the original resource enforces order (true) or 
+     //   the temp_interlinking one (false) 
+     var originalSortMaster;
+     if(window.dataExplorer !== undefined){
+    	 var fields = window.dataExplorer.model.fields;
+    	 var sort_query_part = actualQuery.sort.split(' ');
+    	 var sort_field = sort_query_part[0];
+    	 var sort_direction = sort_query_part[1];
+    	 for (var i = 0; i < fields.length; i++){
+    		 
+    		 if(fields.at(i).get('isInterlinked') === true ||
+    				 fields.at(i).get('hostsInterlinkingResult') === true ||
+    				 fields.at(i).get('hostsInterlinkingScore') === true ||
+    				 fields.at(i).get('hostsAllInterlinkingResults') === true){
+    			 
+    			 //The field belongs to the temp_interl resource and it has to be renamed i.e.
+    			 // there is an '_int' part in its name which it has to be removed to match the 
+    			 // datastore field name
+    			 if (sort_field === fields.at(i).get('id')){
+    				 originalQuery = actualQuery;
+    				 originalQuery.sort = '_id ' + sort_direction;
+    				 interlinkedSortQueryPart = actualQuery.sort;
+    				 
+    				   interlinkedSortQueryPart = 
+    					   sort_field.substr(0, sort_field.indexOf('_int')) + 
+    					   sort_field.substr(sort_field.indexOf('_int') + 4, sort_field.length) +
+    					 ' ' + sort_direction;
+    				   interlinkedSortQueryPart = '_id ' + sort_direction;
+    				  
+    				 console.log(interlinkedSortQueryPart)
+    				 originalSortMaster = false;
+    			 }
+    		 }else{
+    			 if (sort_field === fields.at(i).get('id')){
+    				 originalQuery = actualQuery;
+    				 interlinkedSortQueryPart = '_id ' + sort_direction;
+    				 originalSortMaster = true;
+    			 }
+    		 }
+    	 }
+     }
+     
+     // This function can be used to compare two objects (a,b) based on one of their properties.
+     // direction takes values 'asc' and 'desc' with former being the default one.
+     function compareObjectsCreator(property, direction){
+    	  return function (a, b){
+    		  if (a[property] < b[property])
+	  	   		    result = -1;
+	  	   	  else if (a[property] > b[property])
+	  	   			result = 1;
+	  	   	  else
+	  	   		  return 0;
+	  	   	  
+	  	   	  if (direction == 'desc'){
+	  	   		  return -result
+	  	   	  }else{
+	  	   		  return result
+	  	   	  }
+    	  }
+     } 
+
+     
     this.action('datastore_search', actualQuery, function(err, original_res_results) {
+      
+
+    	
       if (err) {
         cb(err);
         //console.log('--check 2--')
@@ -50,7 +124,8 @@ if (isNodeModule) {
       var interlinkingQuery = {
           limit: actualQuery.limit,
           offset: actualQuery.offset,
-          sort: actualQuery.sort,
+          //sort: actualQuery.sort,
+          sort: interlinkedSortQueryPart,
           resource_id: queryObj.interlinking_resource,
       }
            
@@ -112,7 +187,7 @@ if (isNodeModule) {
 	                    new_fld = {
 	                            'id': fld2.id + '_int_score',
 	                    		'label': 'score',
-	                            'type': 'test',
+	                            'type': 'text',
 	                            'format': 'float-percentage',
 	                            'hostsInterlinkingScore': true
 	                            // TODO: create a custom renderer	
@@ -138,7 +213,7 @@ if (isNodeModule) {
 
 	        original_res_results.result.records.forEach(function(rc, idx){
 	        	interlink_res_fields.forEach(function(fld2, idx2) {
-                    if (fld2['id'] !== '_id' & interlinked_field_ids.indexOf(fld2['id']) >= 0){
+                    if (fld2['id'] !== '_id' && interlinked_field_ids.indexOf(fld2['id']) >= 0){
                     	var int_col_id = fld2.id + '_int';
                     	var int_score_col_name = fld2.id + '_int_score';
                     	var int_results_col_name = fld2.id + '_int_results';
@@ -147,14 +222,30 @@ if (isNodeModule) {
                         var val_int_score = interlink_res_results.result.records[idx][(fld2['id'] + '_score')];
                         var val_int_results = interlink_res_results.result.records[idx][(fld2['id'] + '_results')];
                         
-                        rc[int_col_id] = val_int; 
-                        rc[int_score_col_name] = val_int_score; 
+                        rc[int_col_id] = val_int;
+                        // percentage
+                        rc[int_score_col_name] = val_int_score
+                        //rc[int_score_col_name] = Math.round(val_int_score * 100) + '%'; 
                         rc[int_results_col_name] = val_int_results; 
                    }
-                    
                 });
                 records.push(rc);
 	        });
+	        
+	        console.log('LETS SORT!!')
+	        console.log(sort_field)
+	        console.log(sort_direction)
+	        var comfunc = compareObjectsCreator(sort_field,sort_direction)
+	        records.sort(comfunc)
+	        console.log(records)
+	        
+	        if (originalSortMaster == true){
+	        	;//records.sort(compareObjectsCreator(sort_field,sort_direction))
+	        }else{
+	        	;
+	        }
+	        
+	        
 	        var out = {
 	            total: original_res_results.result.total,
 	            fields: new_fields,
@@ -179,30 +270,32 @@ if (isNodeModule) {
     actualQuery['resource_id'] = queryObj.interlinking_resource;
     //console.log(actualQuery)
     var records = [];
-    var extra = '_int'; 
     var new_updates = [];
     updates.forEach(function(upd, idx){
-        var it = {};
-        it['_id'] = upd['_id'];
-        for (key in upd){
-        	console.log('--------------------------------------------------------')
-            console.log('updates[' +key+'] = '+ upd[key]);
- 
-            var pos = key.indexOf(extra);
-            if (pos > -1){
-                var new_key = key.substring(0,pos);
-                //console.log('NEW KEY++++++++++++++++++++++++')
-                console.log('updates[' +key+'] = '+ upd[key]);
-                it[new_key] = upd[key];
-            }
-        }
-        console.log(it)
-        new_updates.push(it);
+    	
+    	var it = {};
+    	it['_id'] = upd['_id'];
+    	for (key in upd){
+    		// Looking for the interlinking column
+    		var original_col_key = key.substr(0,key.length-4);
+    		var score_col_key = key + '_score';
+    		var results_col_key = key + '_results';   		
+    		if(results_col_key in upd && score_col_key in upd && results_col_key in upd){
+        		console.log(original_col_key + ' ' + key + ' ' + score_col_key + ' ' + results_col_key)
+        		// The interlinking result column in datastore does not have the '_int' suffix 
+        		it[original_col_key] = upd[key];
+        		// The interlinking score column in datastore has a plain '_score' suffix (instead of a '_int_score') 
+        		it[original_col_key + '_score'] = upd[score_col_key];
+    		}
+    	}
+    	console.log(it);
+    	new_updates.push(it);
     });
     console.log(new_updates)
     actualQuery['records'] = new_updates;
     //console.log('Actualquery');
     console.log(actualQuery);
+    
     
     this.action('datastore_upsert', actualQuery, function(err, results) {
       if (err) {
@@ -224,6 +317,7 @@ if (isNodeModule) {
       };
       cb(null, out);
     });
+    
     
   };
 

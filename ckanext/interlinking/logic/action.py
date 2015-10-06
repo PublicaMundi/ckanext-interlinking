@@ -343,7 +343,7 @@ def _initialize_columns(context, col_name, ds, total):
     fields.append(main_column)
     # Build score column. It keeps the score of the main column's interlinking term
     score_column = {'id': col_name + '_score',
-                 'type': 'numeric'}
+                 'type': 'text'}
     fields.append(score_column)
     # Build results column. It keeps all the returned results and their respective scores as a json object.
     results_column = {'id': col_name + '_results',
@@ -404,7 +404,7 @@ def _interlink_column(context, res, col_name, original_ds, new_ds, reference):
             
             ### This piece of code is only temporary!!!
             for term in terms:
-                score = uniform(0,1)
+                score = str(uniform(0,1))
                 suggestion = {'term': term, 'score': score}
                 suggestions.append(suggestion)
             ###
