@@ -1803,8 +1803,20 @@ my.Field = Backbone.Model.extend({
       } else if (format == 'plain') {
         return val;
       } else if(format === 'float-percentage') {
-    	  if (!isNaN(val) && val.toString().indexOf('.') != -1){
-    		  return Math.round(val*100) + '%'
+    	  if (!isNaN(val) && val.toString().indexOf('.') != -1 ||
+    			  val == '1' || val == '0'){
+    		  var color;
+    		  if(parseFloat(val) > 0.7){
+    			  color = 'green'
+    		  }else if(parseFloat(val) > 0.3){
+    			  color = 'orange'
+    		  }else if (parseFloat(val) > 0){
+    			  color = 'red'
+    		  }else{
+    			  color = 'grey'
+    		  }
+    		  return '<strong><font color="' + color+'">' + Math.round(val*100) + '%</font></strong>' 
+    		  //return Math.round(val*100) + '%'
     	  }else{
     		  return val
     	  }
@@ -4527,16 +4539,16 @@ my.SlickGrid = Backbone.View.extend({
     // To do so these fields are included to the state.hiddenColumns[] array
     var hiddenColumns = []
     
-    /*
+    
     for(var i=0; i < this.model.fields.length; i++){  
-    	if(this.model.fields.at(i).get("isInterlinked") === true || 
+    	if(//this.model.fields.at(i).get("isInterlinked") === true || 
     			this.model.fields.at(i).get("hostsAllInterlinkingResults") === true)
     		hiddenColumns.push(this.model.fields.at(i).id);
     }
     hiddenColumns.concat(self.state.get('hiddenColumns'));
     hiddenColumns = int_helper.uniquesArray(hiddenColumns); 
     self.state.set('hiddenColumns',hiddenColumns);   
-    */
+    
     
     _.each(this.model.fields.toJSON(),function(field){
       

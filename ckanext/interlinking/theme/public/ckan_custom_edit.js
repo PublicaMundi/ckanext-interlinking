@@ -53,43 +53,16 @@ if (isNodeModule) {
      // This variable determines if the original resource enforces order (true) or 
      //   the temp_interlinking one (false) 
      var originalSortMaster;
+     
      if(window.dataExplorer !== undefined){
     	 var fields = window.dataExplorer.model.fields;
     	 var sort_query_part = actualQuery.sort.split(' ');
     	 var sort_field = sort_query_part[0];
     	 var sort_direction = sort_query_part[1];
-    	 for (var i = 0; i < fields.length; i++){
-    		 
-    		 if(fields.at(i).get('isInterlinked') === true ||
-    				 fields.at(i).get('hostsInterlinkingResult') === true ||
-    				 fields.at(i).get('hostsInterlinkingScore') === true ||
-    				 fields.at(i).get('hostsAllInterlinkingResults') === true){
-    			 
-    			 //The field belongs to the temp_interl resource and it has to be renamed i.e.
-    			 // there is an '_int' part in its name which it has to be removed to match the 
-    			 // datastore field name
-    			 if (sort_field === fields.at(i).get('id')){
-    				 originalQuery = actualQuery;
-    				 originalQuery.sort = '_id ' + sort_direction;
-    				 interlinkedSortQueryPart = actualQuery.sort;
-    				 
-    				   interlinkedSortQueryPart = 
-    					   sort_field.substr(0, sort_field.indexOf('_int')) + 
-    					   sort_field.substr(sort_field.indexOf('_int') + 4, sort_field.length) +
-    					 ' ' + sort_direction;
-    				   interlinkedSortQueryPart = '_id ' + sort_direction;
-    				  
-    				 console.log(interlinkedSortQueryPart)
-    				 originalSortMaster = false;
-    			 }
-    		 }else{
-    			 if (sort_field === fields.at(i).get('id')){
-    				 originalQuery = actualQuery;
-    				 interlinkedSortQueryPart = '_id ' + sort_direction;
-    				 originalSortMaster = true;
-    			 }
-    		 }
-    	 }
+    	 
+         interlinkedSortQueryPart = '_id ' + sort_direction;
+         originalQuery = actualQuery;
+		 originalQuery.sort = '_id ' + sort_direction;
      }
      
      // This function can be used to compare two objects (a,b) based on one of their properties.
@@ -110,12 +83,8 @@ if (isNodeModule) {
 	  	   	  }
     	  }
      } 
-
      
     this.action('datastore_search', actualQuery, function(err, original_res_results) {
-      
-
-    	
       if (err) {
         cb(err);
         //console.log('--check 2--')
@@ -136,7 +105,6 @@ if (isNodeModule) {
             //console.log('--check 4--')
             return;
           }
-
 	      // map ckan types to our usual types ...
 	      var original_res_fields = _.map(original_res_results.result.fields, function(field) {
 	        field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
@@ -225,7 +193,6 @@ if (isNodeModule) {
                         rc[int_col_id] = val_int;
                         // percentage
                         rc[int_score_col_name] = val_int_score
-                        //rc[int_score_col_name] = Math.round(val_int_score * 100) + '%'; 
                         rc[int_results_col_name] = val_int_results; 
                    }
                 });

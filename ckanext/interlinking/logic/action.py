@@ -99,17 +99,6 @@ def interlinking_resource_create(context, data_dict):
     res['on_interlinking_process'] = True
     res = p.toolkit.get_action('resource_update')(context, res)
     
-    """
-    res = p.toolkit.get_action('resource_update')(context,
-            {
-                'id':res.get('id'),
-                'temp_interlinking_resource': temp_interlinking_resource,
-                'on_interlinking_process': True,
-                'format': res.get('format'),
-                'url': res.get('url')
-                }
-            )
-    """
     # Initialize empty datastore table associated to resource
     new_ds = p.toolkit.get_action('datastore_create')(context,
             {
@@ -209,19 +198,6 @@ def interlinking_resource_delete(context, data_dict):
         res['interlinking_columns_status'] = columns
         res = p.toolkit.get_action('resource_update')(context, res)
         
-        """
-        res = p.toolkit.get_action('resource_update')(context, {
-                'id': res.get('id'),
-                'url': res.get('url'),
-                'format': res.get('format'),
-                'interlinking_parent_id': res.get('interlinking_parent_id'),
-                'interlinking_resource': True,
-                'interlinking_language': res.get('interlinking_language'),
-                'interlinking_status': res.get('interlinking_status'),
-                'interlinking_columns_status':columns,
-                'interlinking_columns':res.get('interlinking_columns'),
-                })
-        """
         filters = {col_name:'*', col_name+'_score':'*', col_name+'_results':'*'}
         return p.toolkit.get_action('datastore_delete')(context, {'resource_id': data_dict.get('resource_id'), 'filters':filters, 'force':True})
 
@@ -240,15 +216,6 @@ def interlinking_resource_delete(context, data_dict):
     del upd_original_res['temp_interlinking_resource']
     upd_original_res = p.toolkit.get_action('resource_update')(context, upd_original_res)
     
-    """
-    upd_original_res = p.toolkit.get_action('resource_update')(context, {
-        'id':original_res.get('id'),
-        'url_type': original_res.get('url_type'),
-        'on_interlinking_process': False,
-        'url':original_res.get('url'),
-        'format':original_res.get('format'),
-        })
-    """
     return p.toolkit.get_action('resource_delete')(context, {'id': data_dict.get('resource_id')})
 
 
@@ -377,19 +344,7 @@ def _interlink_column(context, res, col_name, original_ds, new_ds, reference):
     res['interlinking_resource'] = True
     res['interlinking_columns_status'] = columns
     res = p.toolkit.get_action('resource_update')(context, res)
-
-    """
-    res = p.toolkit.get_action('resource_update')(context, {
-            'id': res.get('id'),
-            'url': res.get('url'),
-            'format': res.get('format'),
-            'interlinking_parent_id': res.get('interlinking_parent_id'),
-            'interlinking_resource': True,
-            'interlinking_status': res.get('interlinking_status'),
-            'interlinking_columns_status':columns,
-            'interlinking_columns':res.get('interlinking_columns'),
-            })
-    """        
+   
     STEP = 100
     offset = 0
     for k in range(1,total/STEP+2):
@@ -397,25 +352,12 @@ def _interlink_column(context, res, col_name, original_ds, new_ds, reference):
         nrecs = []
         for rec in recs:
             original_term = rec.get(col_name)
-            terms = solr_access.spell_search(original_term, reference)
-            
-            suggestions = []
+            suggestions = solr_access.spell_search(original_term, reference)
             best_suggestion = {'term':'', 'score':0}
+            for suggestion in suggestions:
+                if float(suggestion['score']) > float(best_suggestion['score']):
+                     best_suggestion = suggestion
             
-            ### This piece of code is only temporary!!!
-            for term in terms:
-                score = str(uniform(0,1))
-                suggestion = {'term': term, 'score': score}
-                suggestions.append(suggestion)
-            ###
-                # Picking best suggestion
-                if len(suggestions) > 0:
-                    best_suggestion = suggestions[0]
-                    for suggestion in suggestions:
-                        if suggestion['score'] > best_suggestion['score']:
-                            best_suggestion = suggestion
-            
-                
             nrec = {'_id':rec.get('_id'), 
                     col_name: best_suggestion['term'], 
                     col_name+'_score': best_suggestion['score'],
