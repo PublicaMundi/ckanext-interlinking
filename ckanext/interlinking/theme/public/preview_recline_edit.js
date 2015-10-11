@@ -117,7 +117,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         console.log(resourceData)
          */
         if(!(resourceData.on_interlinking_process == 'True')){
-            console.log("Create new");
+            //console.log("Create new");
             resourceData = int_helper.create(function() {}, function() { 
             	//console.log('resourceData on loadPreviewDialog Create New')
             	//console.log(resourceData)
@@ -143,10 +143,8 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         	window.top.location.href = this.options.options.return_url;
         }else{
 	        dataExplorer.model.fetch().done(function(dataset){
-	            //var columns = dataset.fields.models;
 	        	//console.log('point 4.1.1')
 	            var res = {id: self.options.res_interlink_id, endpoint: self.options.site_url + 'api'};
-	        	//console.log(res)
 	            int_helper.show_resource(res, function(response){
 	                if (response){
 	                    var columns= {};
@@ -184,14 +182,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
 
     initializeDataset: function(dataset, resourceData) {
         //console.log('point 6')
-    	/*
-        console.log('dataset variable inside initializeDataset')
-        console.log(dataset)
-        console.log(dataset.id)
-        console.log(dataset.temp_interlinking_resource)
-        console.log('resourceData variable inside initializeDataset')
-        console.log(resourceData)
-        */
+
         var self = this;
 	    function showError(msg){
 	        msg = msg || _('error loading preview');
@@ -212,58 +203,21 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
                 dataset.bind('finalize-interlinking', function(col){
                     var options = {column_id: col.id,
                     				return_url: resourceData.url.substring(0,resourceData.url.indexOf('download'))};
-                    //console.log(options)
                     self.finalizeWithConfirmation(dataset1, options);
                 });
                 dataset.bind('abort-interlinking', function(col){
                     var options = {column_id: col.name};
                     self.deleteWithConfirmation(dataset1, options); 
                 });
-                /*
-                dataset.bind('translate-no', function(col){
-                    var options = {column:col.name};
-                    console.log(options);
-                    //self.deleteWithConfirmation(dataset1, options); 
-                });
-                            
-                dataset.bind('title', function(col){
-                        var col_translation = '';
-                        //int_helper.update({column:col.name, mode:'title', title:col_translation}, self._onLoad, self._onCompleteShow);
-                        self.confirm(self.i18n('confirm_update'));
-                });
-                
-                dataset.bind('translate-manual', function(col){
-                    var options = {column:col.name, mode:'manual'};
-                    console.log(options);
-                    //self.updateWithConfirmation(dataset1, options); 
-                });
 
-                dataset.bind('transcript', function(col){
-                    var options = {column:col.name, mode:'transcription'};
-                    //self.updateWithConfirmation(dataset1, options); 
-                });
-
-                dataset.bind('translate-auto', function(col){
-                    //TODO
-                    var options = {column:col.name, mode:'automatic'};
-                    //self.updateWithConfirmation(dataset1, options); 
-                });
-    			*/
                 dataset1.queryState.bind('save', function(){
-                    //console.log('dataset being saved...');
                     self.sandbox.notify('hello', 'success');
-                    //self.sandbox.client.favoriteDataset(this.button.val()).done(self._onSuccess);
-                    
+                    //self.sandbox.client.favoriteDataset(this.button.val()).done(self._onSuccess);                  
                     dataset1.save();
-                    //.done(function(){
-                        //self._onRepaint(self.options.columns);
-                    //});
                 });
 
                 self.save_btn.click(function() {
-                    //console.log('dataset being saved...');
                     dataset1.save();
-                    //self.sandbox.notify('hello', 'success');
                 });
 
                 self.publish_btn.click(function() {
@@ -274,12 +228,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
                     //});
                 })
                 self.finalize_btn.click(function(){
-                	//alert(resourceData.url.substring(0,resourceData.url.indexOf('resource')))
-                	//console.log(window)
-                	//console.log(window.top)
-                	//console.log(window.top.location)
-                	//console.log(resourceData.url.substring(0,resourceData.url.indexOf('download')))
-                	//window.top.location.href = resourceData.url.substring(0,resourceData.url.indexOf('download'))
+
                 })
         
           })
@@ -290,8 +239,6 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     },
     _onSuccess: function(e) {
         //console.log('point 7')
-        //console.log(e);
-        //console.log(this);
     },
     _onEditor: function(column) {
         //console.log('point 8')
@@ -495,9 +442,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         var self = this;
         for (var key in columns){
             var mode = columns[key];
-            //console.log('key');
-            //console.log(key);
-        //    console.log(col);
+
         //}
         
         header.each(function(idx){
@@ -526,7 +471,6 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
             });
             }
         }
-
   };
 });
 

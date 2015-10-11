@@ -34,7 +34,7 @@ class ReclinePreviewInterlinking(p.SingletonPlugin):
     p.implements(p.IActions)
     p.implements(p.IRoutes, inherit=True)
     p.implements(p.IAuthFunctions)
-    #p.implements(p.IPackageController, inherit=True)
+    p.implements(p.IPackageController, inherit=True)
     p.implements(p.ITemplateHelpers)
     #p.implements(p.IResourcePreview, inherit=True)
 
@@ -72,6 +72,23 @@ class ReclinePreviewInterlinking(p.SingletonPlugin):
                 controller='ckanext.interlinking.controllers.package:InterlinkingController',
                 action = 'resource_datapreview')
         return mapper
+    
+    #IPackageController 1/1 function (inherit=True)
+    def before_view(self, data_dict):
+        # TODO: Need to cut intermediate interlinking resources here
+        # so they are not visible in UI/other API functions
+        print data_dict
+        for k,v in data_dict.iteritems():
+            pass
+            
+            if k=='resources':
+                new_res = []
+                for res in v:
+                    if not 'interlinking_resource' in res:
+                        new_res.append(res)
+                data_dict.update({k:new_res}) 
+        data_dict.update({'num_resources':len(new_res)})
+        return data_dict
 
     # IAuthFunctions 1/1 function
     def get_auth_functions(self):

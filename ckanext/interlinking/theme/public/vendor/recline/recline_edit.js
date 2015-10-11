@@ -3166,7 +3166,6 @@ my.GridRow = Backbone.View.extend({
   ',
 
   onEditClick: function(e) {
-      //console.log('edit click?');
     var editing = this.el.find('.data-table-cell-editor-editor');
     if (editing.length > 0) {
       editing.parents('.data-table-cell-value').html(editing.text()).siblings('.data-table-cell-edit').removeClass("hidden");
@@ -4500,7 +4499,6 @@ my.SlickGrid = Backbone.View.extend({
     if (!this.grid) {
       return;
     }
-    //console.log(record);
     // Let's find the row corresponding to the index
     var row_index = this.grid.getData().getModelRow( record );
     this.grid.invalidateRow(row_index);
@@ -4754,6 +4752,9 @@ my.SlickGrid = Backbone.View.extend({
     var defaults = {
       fadeSpeed:250
     };
+    
+    
+    
     function init() {
       grid.onHeaderContextMenu.subscribe(handleHeaderContextMenu);
       grid.onClick.subscribe(handleCellClick);
@@ -4804,35 +4805,91 @@ my.SlickGrid = Backbone.View.extend({
             // Creating options context menu
             ul.append('<b>Choices:</b>')
             // Adding the original value
+            /*
             ul.append('<li id="originalOption">Original Value: ' + originalValue + '</li>')
             if(otherResults.length > 0){
             	ul.append('<hr />')
-            }
+            }*/
             for (var i=0; i < otherResults.length; i++){
             	ul.append('<li id="termOption" term="' + otherResults[i].term + '" score="' + otherResults[i].score + '">' +
             			otherResults[i].term + "   (score: "+ Math.round(otherResults[i].score*100) +"%)" + "</li>");
             }
-            //ul.append('<hr /><li id="finalizeOption">Finalize interlinking</li>');
-            ul.append('<hr /><li id="abortOption" class="abort">Abort interlinking</li>');
+            ul.append('<hr /><b>Search for another matching term:</b>')
+            ul.append('</br><input id="intSearchFld" class="search" type="text" autocomplete="off" placeholder="Type at least 3 characters..." value>')
+            //ul.append('</br><text id="intSearchFldMsg"></text>');
+            
+            var availableTags = ["Aι Γιαννάκης", "Αβδανίται", "Αβαρίκος", "Αβαρίτσα", "Αβγαριά", "Αβδέλλα", "Αβάντι", 
+                                 "Άβατον", "Αβγόν", "Άβας", "Αβολαδονήσιο", "Αβρακόντες", "Αβλέμονας", "Αβδελλάς", 
+                                 "Αβράμης", "Άβδηρα", "Άβορος", "Αβδού", "Αβία", "Αβραμιάνικα", "Αβραμυλιά", "Αβυσσαλός", 
+                                 "Αβράμιον", "Αβραμιόν", "Αγαλαίοι", "Αγαθόν", "Αγαλάς", "Αγάθη", "Αγγελόκαστρον", "Αγγελοχώριον"];     
+         
+            
+            addTextAreaCallback( $( "#intSearchFld" )[0], function (){
+				 var user_term = $("#intSearchFld").val();
+				 //console.log('term>>' + $("#intSearchFld").val())
+				 var ul_inner = $("#matchingTermsMenu");
+				 ul_inner.empty();
+				 var matchesFound = 0;
+				 for (var i = 0; i < availableTags.length; i++){
+					 if( availableTags[i].toLowerCase().indexOf(user_term.toLowerCase()) >= 0 && user_term.length >= 3){
+						 matchesFound++;
+						 ul_inner.append('<li id="usersOption" term="' + availableTags[i] + '">'+ availableTags[i] +'</li>');
+						 console.log(availableTags[i])
+					 }
+				 }
+	        	 
+	        	 if(matchesFound > 0){
+		        	 $("#matchingTermsMenu")
+			        	.css("top", $("#termsMenu").offset().top + $("#termsMenu").height())
+			        	.css("left", $("#termsMenu").offset().left)
+			        	.show();
+	        	 }else{
+	        		 $("#intSearchFld").attr()
+	        	 }
+        	 
+        	 
+            }, 1000 );
             
             $("#termsMenu")
 	        	.css("top", e.pageY)
 	        	.css("left", e.pageX)
 	        	.show();
-            
+                        
         	$("body").click(function(e) {
         	    if (!$(e.target).hasClass("slick-cell")){
         	    	$("#termsMenu").hide();
+        	    	$("#matchingTermsMenu").hide();
         	    }
         	});
+        	
+        	
  
     	} else{
             $("body").one("click", function () {
                 $("#termsMenu").hide();
+    	    	$("#matchingTermsMenu").hide();
              });
     	}
     	
     }
+    
+    function addTextAreaCallback(textArea, callback, delay) {
+	    var timer = null;
+	    textArea.onkeyup = function() {
+	    	if($("#intSearchFld").val().length >= 3){
+		        if (timer) {
+		            window.clearTimeout(timer);
+		        }
+		        timer = window.setTimeout( function() {
+		            timer = null;
+		            callback();
+		        }, delay );
+	    	}else{
+	    		$("#matchingTermsMenu").hide();
+	    	}
+	    };
+	    textArea = null;
+	}
     
 
     function handleHeaderContextMenu(e, args) {
@@ -4902,6 +4959,9 @@ my.SlickGrid = Backbone.View.extend({
     }
     
     $("#termsMenu").off('click').click(function (e) {
+    	if($(e.target).is("input"))
+        	e.stopPropagation();
+    	
     	if (!$(e.target).is("li")) {
             return;
         }  
@@ -4930,11 +4990,6 @@ my.SlickGrid = Backbone.View.extend({
     		grid.render();
     	}else if (e.target.id == "termOption"){
     		record.set(intFieldId, $(e.target).attr('term'));
-    		//TODO: instead of updating score field with a string (80%), update it with a value 
-    		//(e.g. 0.8) and make sure that it is properly handled by the column handler.
-    		//record.set(scoreFieldId, $(e.target).attr('score'));
-    		// percentage
-    		//record.set(scoreFieldId, Math.round($(e.target).attr('score')*100) + '%');
     		record.set(scoreFieldId, $(e.target).attr('score'));
         	grid.getData().updateItem(record,row);
         	grid.updateRow(row);
@@ -4987,11 +5042,47 @@ my.SlickGrid = Backbone.View.extend({
     		
     	}
     	*/
+		$("#termsMenu").hide();
+		
     });
-
-    function updateColumn(e) {
-      //console.log('updatiiiing');
-       
+    
+    $('#matchingTermsMenu').off('click').click(function (e) {
+    	if($(e.target).is("input"))
+        	e.stopPropagation();
+    	
+    	if (!$(e.target).is("li")) {
+            return;
+        }  
+    	if (!grid.getEditorLock().commitCurrentEdit()) {
+            return;
+        }
+    	
+    	var fields = model.fields;
+    	var row = selctedCell.row;
+    	var col = selctedCell.cell;
+    	var record = Object.create(model.records.models[row]);
+		var intFieldId = selectedField.id;
+		var scoreFieldId = fields.at(fields.indexOf(selectedField) + 1).id;
+		
+    	
+    	record.set(intFieldId, $(e.target).attr('term'));
+		record.set(scoreFieldId, '-');
+    	grid.getData().updateItem(record,row);
+    	grid.updateRow(row);
+		grid.render();
+		
+    	//var fields = model.fields;
+    	
+    	console.log($(e.target).text())
+    });
+    
+    
+    /*
+    $("#termsMenu").bind('mouseleave', function (e) {
+        $(this).fadeOut(options.fadeSpeed);
+      });
+	*/
+    function updateColumn(e) {       
       if($(e.target).data('option') === 'interlink-with'){
     	  if (typeof $(e.target).data('reference') !== "undefined") {
     		  reference = $(e.target).data('reference')
@@ -5004,37 +5095,6 @@ my.SlickGrid = Backbone.View.extend({
       }else if($(e.target).data('option') === 'abort-interlinking'){
     	  model.trigger('abort-interlinking', column);
       }
-
-      /*
-       * 
-       console.log($(e.target).data('option'))  
-      if ($(e.target).data('option') === 'translate-no' ){
-    	  alert($(e.target).data('option'))
-          //alert('non translatable');
-          model.trigger('translate-no', column);
-
-      }
-       * 
-      if ($(e.target).data('option') === 'autoresize') {
-        var checked;
-        if ($(e.target).is('li')){
-            checkbox = $(e.target).find('input').first();
-            checked = !checkbox.is(':checked');
-            checkbox.attr('checked',checked);
-        } else {
-          checked = e.target.checked;
-        }
-
-        if (checked) {
-          grid.setOptions({forceFitColumns:true});
-          grid.autosizeColumns();
-        } else {
-          grid.setOptions({forceFitColumns:false});
-        }
-        options.state.set({fitColumns:checked});
-        return;
-      }
-	*/
     }
     
     function _compareInterlinkingResults(a, b){

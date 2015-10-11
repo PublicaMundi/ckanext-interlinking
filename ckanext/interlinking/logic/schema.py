@@ -95,6 +95,7 @@ def interlinking_resource_delete_schema():
 
 def interlinking_resource_finalize_schema():
     schema = {
+        'package_id': [not_missing, not_empty, unicode, package_id_or_name_exists],
         'resource_id': [not_missing, not_empty, unicode, resource_id_exists],
         '__junk': [empty],
         '__before': [rename('id', 'resource_id')]

@@ -41,7 +41,6 @@ if (isNodeModule) {
     var actualQuery = my._normalizeQuery(queryObj);
     var self = this;
      //console.log('--check 1--') 
-     //console.log(actualQuery)
      
      /*When it comes to sorting a few things have to be done:
       *  a)Determine if the sorting field refers to the original or the temp_interl resource
@@ -171,7 +170,7 @@ if (isNodeModule) {
 	                    new_fields.push(new_fld);
 	                }
 	            });
-	            //console.log('--check 8--')
+	            //console.log('--check 7--')
 	            if(!match_found){
 	            	new_fields.push(fld);
 	            }
@@ -199,12 +198,8 @@ if (isNodeModule) {
                 records.push(rc);
 	        });
 	        
-	        console.log('LETS SORT!!')
-	        console.log(sort_field)
-	        console.log(sort_direction)
 	        var comfunc = compareObjectsCreator(sort_field,sort_direction)
 	        records.sort(comfunc)
-	        console.log(records)
 	        
 	        if (originalSortMaster == true){
 	        	;//records.sort(compareObjectsCreator(sort_field,sort_direction))
@@ -226,16 +221,12 @@ if (isNodeModule) {
   };
 
   my.Client.prototype.datastoreUpdate = function(queryObj, cb) {
-	//console.log(queryObj) 
     var actualQuery = my._normalizeQuery(queryObj);
     actualQuery['method'] = 'upsert';
     actualQuery['allow_update_with_id'] = true;
     actualQuery['force'] = true;
     var updates = queryObj.updates;
-    //console.log('QueryObj');
-    //console.log(queryObj);
     actualQuery['resource_id'] = queryObj.interlinking_resource;
-    //console.log(actualQuery)
     var records = [];
     var new_updates = [];
     updates.forEach(function(upd, idx){
@@ -248,20 +239,15 @@ if (isNodeModule) {
     		var score_col_key = key + '_score';
     		var results_col_key = key + '_results';   		
     		if(results_col_key in upd && score_col_key in upd && results_col_key in upd){
-        		console.log(original_col_key + ' ' + key + ' ' + score_col_key + ' ' + results_col_key)
         		// The interlinking result column in datastore does not have the '_int' suffix 
         		it[original_col_key] = upd[key];
         		// The interlinking score column in datastore has a plain '_score' suffix (instead of a '_int_score') 
         		it[original_col_key + '_score'] = upd[score_col_key];
     		}
     	}
-    	console.log(it);
     	new_updates.push(it);
     });
-    console.log(new_updates)
     actualQuery['records'] = new_updates;
-    //console.log('Actualquery');
-    console.log(actualQuery);
     
     
     this.action('datastore_upsert', actualQuery, function(err, results) {
@@ -477,10 +463,6 @@ recline.Backend.CkanInterlinkEdit = recline.Backend.CkanInterlinkEdit || {};
   my.fetch = function(dataset) {
 	  /*
 	  console.log('------inside FETCH!!!------')
-	  console.log('dataset variable inside fetch')
-	  console.log(dataset)
-	  console.log(dataset.id)
-      console.log(dataset.temp_interlinking_resource)
       */
     var dfd = new Deferred();
     my.query({}, dataset)
@@ -499,7 +481,6 @@ recline.Backend.CkanInterlinkEdit = recline.Backend.CkanInterlinkEdit || {};
 
   my.query = function(queryObj, dataset) {
 	  //console.log('------inside QUERY!!!------')
-	  //console.log(queryObj)
     var dfd = new Deferred()
       , wrapper
       ;
@@ -516,16 +497,9 @@ recline.Backend.CkanInterlinkEdit = recline.Backend.CkanInterlinkEdit || {};
       dataset.id = out.resource_id;
       wrapper = new CKAN.Client(out.endpoint);
     }
-    /*
-    console.log('dataset variable inside QUERY')
-    console.log(dataset)
-    console.log(dataset.id)
-    console.log(dataset.temp_interlinking_resource)*/
     queryObj.resource_id = dataset.id;
     queryObj.interlinking_resource = dataset.temp_interlinking_resource; 
-    
-    //queryObj.interlinking_resource = dataset.being_interlinked_with; 
-    
+        
     wrapper.datastoreQuery(queryObj, function(err, out) {
       if (err) {
         dfd.reject(err);
@@ -547,10 +521,8 @@ recline.Backend.CkanInterlinkEdit = recline.Backend.CkanInterlinkEdit || {};
           wrapper = new CKAN.Client(out.endpoint);
       }
       queryObj.resource_id = dataset.id;
-      //queryObj.translation_column = dataset.translation_column;
-      //queryObj.translation_language = dataset.translation_language;
+
      queryObj.interlinking_resource = dataset.temp_interlinking_resource; 
-     //console.log(queryObj)
      wrapper.datastoreUpdate(queryObj,function(err, out){
      if (err) {
          console.log(err);
