@@ -11,7 +11,7 @@ function InterlinkHelper (resource){
 
     this.create = function(ld, cb) {
         var url = resource.endpoint + '/3/action/interlinking_resource_create';
-
+        
         var package_id = this._strip_package_id(resource.url);
         var options = {
             resource_id:resource.id,
@@ -82,14 +82,12 @@ function InterlinkHelper (resource){
     };
 
     this.finalize = function(options, ld, cb) {
-    	alert('point 5')
         var url = resource.endpoint + '/3/action/interlinking_resource_finalize';
         var res_id = resource.temp_interlinking_resource;
         var col_name = options.column_id;
         var return_url = options.return_url;
         
         var package_id = this._strip_package_id(resource.url);
-        alert(package_id)
 
         var options = {
         	package_id: package_id,

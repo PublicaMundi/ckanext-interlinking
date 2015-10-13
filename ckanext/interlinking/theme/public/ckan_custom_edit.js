@@ -461,9 +461,6 @@ recline.Backend.CkanInterlinkEdit = recline.Backend.CkanInterlinkEdit || {};
     
   // ### fetch
   my.fetch = function(dataset) {
-	  /*
-	  console.log('------inside FETCH!!!------')
-      */
     var dfd = new Deferred();
     my.query({}, dataset)
       .done(function(data) {

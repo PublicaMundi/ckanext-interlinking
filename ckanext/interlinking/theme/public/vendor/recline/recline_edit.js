@@ -4753,8 +4753,7 @@ my.SlickGrid = Backbone.View.extend({
       fadeSpeed:250
     };
     
-    
-    
+       
     function init() {
       grid.onHeaderContextMenu.subscribe(handleHeaderContextMenu);
       grid.onClick.subscribe(handleCellClick);

@@ -56,6 +56,7 @@ class ReclinePreviewInterlinking(p.SingletonPlugin):
                 'interlinking_resource_delete': action.interlinking_resource_delete,
                 'interlinking_resource_finalize': action.interlinking_resource_finalize,
                 'interlinking_get_reference_resources': action.interlinking_get_reference_resources,
+                'interlinking_resource_download': action.interlinking_resource_download,
                 }
     
     # IRoutes 1/1 function (inherit=True)
@@ -71,13 +72,18 @@ class ReclinePreviewInterlinking(p.SingletonPlugin):
                 '/dataset/{id}/resource_interlink_inner/{resource_id}',
                 controller='ckanext.interlinking.controllers.package:InterlinkingController',
                 action = 'resource_datapreview')
+        
+        mapper.connect(
+                       'interlinking_resource_download',
+                       '/interlinking/download_resource/{resource_id}',
+                       controller = 'ckanext.interlinking.controllers.package:InterlinkingController',
+                       action = 'interlinking_resource_download')
         return mapper
     
     #IPackageController 1/1 function (inherit=True)
     def before_view(self, data_dict):
         # TODO: Need to cut intermediate interlinking resources here
         # so they are not visible in UI/other API functions
-        print data_dict
         for k,v in data_dict.iteritems():
             pass
             

@@ -11,7 +11,6 @@ class InterlinkingController(BaseController):
     def resource_interlink(self, resource_id, id):
         #user_dict = self._check_access()
         #self._setup_template_variables(user_dict)
-        print resource_id
         pkg_dict = self._check_pkg_access(id)
         res = self._check_res_access(resource_id)
         self._setup_template_variables(pkg_dict, res)
@@ -48,6 +47,29 @@ class InterlinkingController(BaseController):
             abort(401, _('Unauthorized to read resource %s') % id)
         else:
             return render('recline_interlink.html')
+        
+    def interlinking_resource_download(self, resource_id):
+        context = {
+            'model': model,
+            'session': model.Session,
+            'user': c.user or c.author,
+            'auth_user_obj': c.userobj
+        }
+        
+        try:
+            file = toolkit.get_action('interlinking_resource_download')(context, {'resource_id': resource_id})
+            
+            response.headers['Content-type'] = 'text/csv'
+            response.headers['Content-Disposition'] = 'filename="' + file['filename'] + '"'
+            #response.addHeader("Content-Disposition", "attachment;filename=myfilename.csv"); 
+            #response.data = resource_as_csv
+
+        except NotFound:
+            abort(404, _('Resource not found'))
+        else:
+            return [file['csv']]
+            #return [resource_as_csv]
+        
 
     #def edit_page(self):
     def _check_pkg_access(self, name_or_id):

@@ -89,7 +89,6 @@ def interlinking_resource_create(context, data_dict):
                 # "interlinking_status" possible states:
                 #  "not-started": The interlinking resource has been created but a column has not been chosen for interlinking yet
                 #  "undergoing": A column has been chosen for interlinking and the process is undergoing
-                #  "finalized": Interlinking has finished and a new interlinked resource has been published 
                 'interlinking_status': 'not-started',
                 'state': 'active',  
                 'interlinking_columns_status':columns_status,
@@ -135,8 +134,8 @@ def interlinking_resource_update(context, data_dict):
         raise p.toolkit.ValidationError('Resource "{0}" is not an interlinking resource'.format(res.get('id')))
     
     # Check if candidate resource's interlinking is already undergoing
-    #if not res.get('interlinking_status') == 'not-started':    
-    #    raise p.toolkit.ValidationError('Resource "{0}" is already being interlinked'.format(res.get('id')))
+    if not res.get('interlinking_status') == 'not-started':    
+        raise p.toolkit.ValidationError('Resource "{0}" is already being interlinked'.format(res.get('id')))
     
     original_res = p.toolkit.get_action('resource_show')(context, {'id': res.get('interlinking_parent_id')})
 
@@ -201,7 +200,7 @@ def interlinking_resource_delete(context, data_dict):
             if k == col_name:
                 columns.update({k:'not-interlinked'})
         columns = json.dumps(columns)
-        
+               
         res = p.toolkit.get_action('resource_show')(context, res)
         res['interlinking_columns_status'] = columns
         res['interlinking_status'] = 'not-started'
@@ -242,11 +241,17 @@ def interlinking_resource_finalize(context, data_dict):
     interlinked_resource_id = data_dict.get('resource_id')
     int_res = p.toolkit.get_action('resource_show')(context, {'id': interlinked_resource_id})
     original_resource_id = int_res.get('interlinking_parent_id')
+    
     res = p.toolkit.get_action('resource_show')(context, {'id': original_resource_id})
+    original_url = res.get('url')
+    #get original filename
+    original_url_splitted = original_url.split('/')
+    original_file_name = original_url_splitted[ len(original_url_splitted)-1 ]
+    
     
     on_interlinking_process = res.get('on_interlinking_process')
-    if not on_interlinking_process or on_interlinking_process == False:
-        raise p.toolkit.ValidationError('Resource "{0}" is not currently being interlinked resource'.format(res.get('id')))
+    #if not on_interlinking_process or on_interlinking_process == False:
+    #    raise p.toolkit.ValidationError('Resource "{0}" is not currently being interlinked resource'.format(res.get('id')))
     
     #TODO get a better name for reference
     interlinking_columns_status = json.loads(int_res.get('interlinking_columns_status'))
@@ -255,8 +260,8 @@ def interlinking_resource_finalize(context, data_dict):
             interlinked_column = i
             interlinking_reference  = interlinking_columns_status[i]
             
-    if not interlinked_column:
-        raise p.toolkit.ValidationError('Resource "{0}" does not have an interlinked column'.format(res.get('id')))
+    #if not interlinked_column:
+    #    raise p.toolkit.ValidationError('Resource "{0}" does not have an interlinked column'.format(res.get('id')))
     
     original_name = res.get('name')
     
@@ -265,18 +270,23 @@ def interlinking_resource_finalize(context, data_dict):
             {
                 'package_id': data_dict.get('package_id'),
                 'url':'http://',
-                'format':'data_table',
+                'format':'csv',
                 'name': original_name + ' (interlinked)',
                 'description': 'This is an interlinked resource. It originates from `' 
                                 + original_name + '` whose column `' 
-                                + interlinked_column + '` was interlinked with reference dataset:'
-                                + interlinking_reference,
+                                + interlinked_column + '` was interlinked with reference dataset: `'
+                                + interlinking_reference + '`',
                 'interlinking_origin': res.get('id'),
                 'interlinked_column': interlinked_column,
                 'interlinked_with': interlinking_reference,
                 'interlinked_resource': True,
+                'original_file_name': original_file_name,
                 'state': 'active',    
             })
+    
+    #Update new resource's url
+    new_res['url'] = '/'.join(original_url_splitted[:3]) + '/interlinking/download_resource/' + new_res.get('id')
+    new_res = p.toolkit.get_action('resource_update')(context, new_res)
         
     # Create a related datastore table
     # First of get all original fields
@@ -301,14 +311,11 @@ def interlinking_resource_finalize(context, data_dict):
     interlinked_columns = []
     for col, status in columns.items():
         if col == '_id':            
-            print '_id', col
             interlinked_columns.append(col)
         if status != 'not-interlinkable' and status != 'not-interlinked':
-            print 'int', col
             interlinked_columns.append(col)
             interlink_col_name = col
         else:
-            print 'orig', col
             original_columns.append(col)
     
     STEP = 100
@@ -343,6 +350,7 @@ def interlinking_resource_finalize(context, data_dict):
     # The intermediate interlinking resource is deleted along with its datastore table, and the original resource 
     # is marked as not being currently interlinked.   
     return p.toolkit.get_action('interlinking_resource_delete')(context, {'resource_id': interlinked_resource_id})
+    
 
 # This action provides all available reference resources for interlinking
 @toolkit.side_effect_free
@@ -362,6 +370,61 @@ def interlinking_get_reference_resources(context, data_dict):
         ref_resource['column-name'] = ref_resource_members[4]
         ref_resources.append(ref_resource)
     return ref_resources
+
+
+@toolkit.side_effect_free
+def interlinking_resource_download(context, data_dict):
+    #p.toolkit.check_access('interlinking_resource_download', context, data_dict)
+        
+    schema = context.get('schema', dsschema.interlinking_resource_delete_schema())
+    data_dict, errors = _validate(data_dict, schema, context)
+    if errors:
+        raise p.toolkit.ValidationError(errors)
+    
+    res_id = data_dict.get('resource_id')
+    
+    # Get resource to check if it is indeed an interlinking resource
+    res = p.toolkit.get_action('resource_show')(context, {'id': res_id})
+    if not res.get('interlinked_resource'):
+        raise p.toolkit.ValidationError('Resource "{0}" is not an interlinked resource'.format(res_id))
+    
+    # Retrieve related datastore table
+    ds = p.toolkit.get_action('datastore_search')(context, {'resource_id': res_id})
+        
+    csv = unicode('')
+    #Headers first
+    fields = ds.get('fields')
+    #Removing '_id' field
+    fields = [ f for f in fields if f.get('id') != '_id' ]
+        
+    last = len(fields) - 1
+    for i, col in enumerate(fields):
+        field = col.get('id')
+        if i == last:
+            csv += '"' + field + '"\n'
+        else:
+            csv += '"' + field + '", '
+            
+    #Records follow
+    records = ds.get('records')
+    for rec in records:
+        for i, f in enumerate(fields):
+            if i == last:
+                if f.get('type') == 'numeric':
+                    csv += rec.get(f.get('id')) + '\n'
+                else:
+                    csv += '"' + rec.get(f.get('id')) + '"\n'
+            else:
+                if f.get('type') == 'numeric':
+                    csv += rec.get(f.get('id')) + ', '
+                else:
+                    csv += '"' + rec.get(f.get('id')) + '", '
+                    
+    response = {}
+    response['filename'] = res.get('original_file_name')
+    response['csv'] = csv.encode('utf8')                
+    
+    return response
         
 
 def _initialize_columns(context, col_name, ds, total):
@@ -411,7 +474,6 @@ def _interlink_column(context, res, col_name, original_ds, new_ds, reference):
     res['interlinking_resource'] = True
     res['interlinking_columns_status'] = columns
     res['interlinking_status'] = 'undergoing'
-    pprint.pprint(res)
     res = p.toolkit.get_action('resource_update')(context, res)
     
     STEP = 100
@@ -423,7 +485,6 @@ def _interlink_column(context, res, col_name, original_ds, new_ds, reference):
                                         'offset': offset, 
                                         'limit': STEP, 
                                         'sort':'_id'}).get('records')
-        pprint.pprint(recs)
         nrecs = []
         for rec in recs:
             original_term = rec.get(col_name)
@@ -438,7 +499,6 @@ def _interlink_column(context, res, col_name, original_ds, new_ds, reference):
                     col_name+'_score': best_suggestion['score'],
                     col_name+'_results': json.dumps(suggestions)}
             nrecs.append(nrec)
-        pprint.pprint(nrecs)
              
         ds = p.toolkit.get_action('datastore_upsert')(context,
                 {

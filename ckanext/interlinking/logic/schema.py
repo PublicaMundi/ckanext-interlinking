@@ -102,6 +102,14 @@ def interlinking_resource_finalize_schema():
     }
     return schema
 
+def interlinking_resource_download():
+    schema = {
+        'resource_id': [not_missing, not_empty, unicode, resource_id_exists],
+        '__junk': [empty],
+        '__before': [rename('id', 'resource_id')]
+    }
+    return schema
+
 def interlinking_get_reference_resources_schema():
     schema = {
         '__junk': [empty],
