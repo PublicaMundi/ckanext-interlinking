@@ -38,6 +38,7 @@ def rename(old, new):
 
     return rename_field
 
+
 def list_of_strings_or_lists(key, data, errors, context):
     value = data.get(key)
     if not isinstance(value, list):
@@ -52,6 +53,7 @@ def list_of_strings_or_string(key, data, errors, context):
     if isinstance(value, basestring):
         return
     list_of_strings_or_lists(key, data, errors, context)
+    
 
 def json_validator(value, context):
     if isinstance(value, dict) or isinstance(value, list):
@@ -72,6 +74,7 @@ def interlinking_resource_create_schema():
     }
     return schema
 
+
 def interlinking_resource_update_schema():
     schema = {
         'resource_id': [not_missing, not_empty, unicode],
@@ -83,6 +86,7 @@ def interlinking_resource_update_schema():
     }
     return schema
 
+
 def interlinking_resource_delete_schema():
     schema = {
         'resource_id': [not_missing, not_empty, resource_id_exists, unicode],
@@ -93,16 +97,19 @@ def interlinking_resource_delete_schema():
     }
     return schema
 
+
 def interlinking_resource_finalize_schema():
     schema = {
         'package_id': [not_missing, not_empty, unicode, package_id_or_name_exists],
         'resource_id': [not_missing, not_empty, unicode, resource_id_exists],
+        'column_name': [not_missing, not_empty, unicode],
         '__junk': [empty],
         '__before': [rename('id', 'resource_id')]
     }
     return schema
 
-def interlinking_resource_download():
+
+def interlinking_resource_download_schema():
     schema = {
         'resource_id': [not_missing, not_empty, unicode, resource_id_exists],
         '__junk': [empty],
@@ -110,8 +117,30 @@ def interlinking_resource_download():
     }
     return schema
 
+
 def interlinking_get_reference_resources_schema():
     schema = {
+        '__junk': [empty],
+        '__before': [rename('id', 'resource_id')]
+    }
+    return schema
+
+
+def interlinking_check_full_interlink_schema():
+    schema = {
+        'package_id': [not_missing, not_empty, unicode, package_id_or_name_exists],
+        'resource_id': [not_missing, not_empty, unicode, resource_id_exists],
+        'column_name': [not_missing, not_empty, unicode],
+        '__junk': [empty],
+        '__before': [rename('id', 'resource_id')]
+    }
+    return schema
+
+
+def interlinking_star_search_schema():
+    schema = {
+        'term': [not_missing, not_empty, unicode],
+        'reference_resource': [not_missing, not_empty, unicode],
         '__junk': [empty],
         '__before': [rename('id', 'resource_id')]
     }

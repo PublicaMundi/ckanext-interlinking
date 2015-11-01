@@ -19,6 +19,7 @@ import ckan.plugins.toolkit as toolkit
 import ckan.plugins as p
 import ckanext.interlinking.logic.schema as dsschema
 import ckanext.interlinking.logic.solr_access as solr_access
+import ckanext.interlinking.logic.lucene_access as lucene_access
 
 import uuid
 #from ckan.lib.celery_app import celery
@@ -134,8 +135,8 @@ def interlinking_resource_update(context, data_dict):
         raise p.toolkit.ValidationError('Resource "{0}" is not an interlinking resource'.format(res.get('id')))
     
     # Check if candidate resource's interlinking is already undergoing
-    if not res.get('interlinking_status') == 'not-started':    
-        raise p.toolkit.ValidationError('Resource "{0}" is already being interlinked'.format(res.get('id')))
+    #if not res.get('interlinking_status') == 'not-started':    
+    #    raise p.toolkit.ValidationError('Resource "{0}" is already being interlinked'.format(res.get('id')))
     
     original_res = p.toolkit.get_action('resource_show')(context, {'id': res.get('interlinking_parent_id')})
 
@@ -156,11 +157,12 @@ def interlinking_resource_update(context, data_dict):
     columns = json.loads(res.get('interlinking_columns_status','{}'))
     if columns[col_name] == 'not-interlinkable':
         raise p.toolkit.ValidationError('Column name "{0}" cannot be interlinked'.format(col_name))
-    _initialize_columns(context, col_name, ds, original_ds.get('total'))
-    _interlink_column(context, res, col_name, original_ds, ds, reference_resource)
+    ref_fields = _initialize_columns(context, col_name, ds, original_ds.get('total'), reference_resource)
+    _interlink_column(context, res, col_name, original_ds, ds, reference_resource, ref_fields)
     return
 
-
+    
+    
 def interlinking_resource_delete(context, data_dict):
     '''Delete a column or the whole resource given an (interlinking) resource_id and/or column_name
 
@@ -200,13 +202,19 @@ def interlinking_resource_delete(context, data_dict):
             if k == col_name:
                 columns.update({k:'not-interlinked'})
         columns = json.dumps(columns)
-               
+        
         res = p.toolkit.get_action('resource_show')(context, res)
+        ref_fields = json.loads(res['reference_fields'])
+        filters = {}
+        for field in ref_fields:
+            filters[field['id']] = '*'
+            
         res['interlinking_columns_status'] = columns
+        res['reference_fields'] = json.dumps({})
         res['interlinking_status'] = 'not-started'
         res = p.toolkit.get_action('resource_update')(context, res)
         
-        filters = {col_name:'*', col_name+'_score':'*', col_name+'_results':'*'}
+        #filters = {col_name:'*', col_name+'_score':'*', col_name+'_results':'*'}
         return p.toolkit.get_action('datastore_delete')(context, {'resource_id': data_dict.get('resource_id'), 'filters':filters, 'force':True})
 
     # Delete datastore table
@@ -222,6 +230,7 @@ def interlinking_resource_delete(context, data_dict):
     upd_original_res = p.toolkit.get_action('resource_show')(context, original_res)
     upd_original_res['on_interlinking_process'] = False
     del upd_original_res['temp_interlinking_resource']
+    del upd_original_res['interlinked_column']
     upd_original_res = p.toolkit.get_action('resource_update')(context, upd_original_res)
     
     return p.toolkit.get_action('resource_delete')(context, {'id': data_dict.get('resource_id')})
@@ -239,6 +248,7 @@ def interlinking_resource_finalize(context, data_dict):
         raise p.toolkit.ValidationError(errors)
 
     interlinked_resource_id = data_dict.get('resource_id')
+    interlinking_column = data_dict.get('column_name')
     int_res = p.toolkit.get_action('resource_show')(context, {'id': interlinked_resource_id})
     original_resource_id = int_res.get('interlinking_parent_id')
     
@@ -292,7 +302,6 @@ def interlinking_resource_finalize(context, data_dict):
     # First of get all original fields
     original_ds = p.toolkit.get_action('datastore_search')(context, {'resource_id': res.get('id')})
     fields = original_ds.get('fields')
-    
     # Remove _id from fields list
     fields.pop(0)
     # Create new final interlinked resource with original fields
@@ -317,6 +326,8 @@ def interlinking_resource_finalize(context, data_dict):
             interlink_col_name = col
         else:
             original_columns.append(col)
+            
+    reference_colums = ['_id', interlinking_column]
     
     STEP = 100
     offset = 0    
@@ -333,13 +344,12 @@ def interlinking_resource_finalize(context, data_dict):
                                        'resource_id':interlinked_resource_id, 
                                        'offset': offset, 
                                        'limit': STEP, 
-                                       'fields': interlinked_columns, 
+                                       'fields': reference_colums, 
                                        'sort':'_id'}).get('records')
         
         #Original records are enhanced with the interlinked field values
         for orec, irec in zip(original_recs, interlinked_recs):
-            orec[interlink_col_name] = irec[interlink_col_name]
-        
+            orec[interlink_col_name] = irec[interlinking_column]
         updated_ds = p.toolkit.get_action('datastore_upsert')(context,
                 {
                     'resource_id': new_res.get('id'),
@@ -376,7 +386,7 @@ def interlinking_get_reference_resources(context, data_dict):
 def interlinking_resource_download(context, data_dict):
     #p.toolkit.check_access('interlinking_resource_download', context, data_dict)
         
-    schema = context.get('schema', dsschema.interlinking_resource_delete_schema())
+    schema = context.get('schema', dsschema.interlinking_resource_download_schema())
     data_dict, errors = _validate(data_dict, schema, context)
     if errors:
         raise p.toolkit.ValidationError(errors)
@@ -425,41 +435,93 @@ def interlinking_resource_download(context, data_dict):
     response['csv'] = csv.encode('utf8')                
     
     return response
+
+
+def interlinking_star_search(context, data_dict):
+    ''' It searches lucene with a '*' wildcard. The wildcard is positioned at the end of
+    the search string. 
+    '''
+    schema = context.get('schema', dsschema.interlinking_star_search_schema())
+    data_dict, errors = _validate(data_dict, schema, context)
+    if errors:
+        raise p.toolkit.ValidationError(errors)
+    
+    term = data_dict.get('term')
+    reference_resource = data_dict.get('reference_resource')
+    
+    return lucene_access.search(term, reference_resource, 'like')
+
+
+def interlinking_check_full_interlink(context, data_dict):
+    p.toolkit.check_access('interlinking_check_full_interlink', context, data_dict)
+
+    schema = context.get('schema', dsschema.interlinking_check_full_interlink_schema())
+    data_dict, errors = _validate(data_dict, schema, context)
+    if errors:
+        raise p.toolkit.ValidationError(errors)
+    
+    interlinked_resource_id = data_dict.get('resource_id')
+    interlinking_column = data_dict.get('column_name')
+    int_res = p.toolkit.get_action('resource_show')(context, {'id': interlinked_resource_id})
+    
+    
+
+@toolkit.side_effect_free
+#TODO: remove it
+def interlinking_temp(context, data_dict):
+    #suggestions = lucene_access.search('Νέας Ιωνίας', 'kallikratis')
+    suggestions = lucene_access.getFields('kallikratis')
         
 
-def _initialize_columns(context, col_name, ds, total):
-    fields = ds.get('fields')
-    # Remove _id from fields list
-    fields.pop(0)
-    for field in fields:
-        if col_name == field.get('id'):
-            return
-    # Build main column. It keeps the best result or the user's choice
-    main_column = {'id': col_name,
-                'type': 'text'}
-    fields.append(main_column)
-    # Build score column. It keeps the score of the main column's interlinking term
-    score_column = {'id': col_name + '_score',
-                 'type': 'text'}
-    fields.append(score_column)
-    # Build results column. It keeps all the returned results and their respective scores as a json object.
-    results_column = {'id': col_name + '_results',
-                 'type': 'text'}
-    fields.append(results_column)
+def _initialize_columns(context, col_name, ds, total, reference_resource):
+    # Get current datastore's fields
+    current_fields = ds.get('fields')
+    fields = current_fields
     
+    # Get reference dataset's fields that should be stored in datastore
+    reference_field_names = lucene_access.getFields(reference_resource, True)
+
+    # Get fields as they supposed to be stored in the datastore
+    final_fields = []
+    final_fields.append({'id': reference_field_names[0], 'type': 'text'})
+    final_fields.append({'id': u"int__score", 'type': 'text'})
+    final_fields.append({'id': u"int__checked_flag", 'type': 'boolean'})
+    final_fields.append({'id': u"int__all_results", 'type': 'text'})
+    for field in reference_field_names:
+        if field != reference_field_names[0]:
+            final_fields.append({'id': field, 'type': 'text'})
+    
+    # Check that all final_fields already exist in the datastore
+    datastore_recreation_needed = False
+    for final_field in final_fields:
+        exists = False
+        for current_field in current_fields:
+            if final_field['id'] == current_field['id']:
+                exists = True
+                break
+        if exists == False:
+            datastore_recreation_needed = True
+            break
+    
+    if datastore_recreation_needed == False:
+        return
+    
+    # Drop and recreate datastore table
+    p.toolkit.get_action('datastore_delete')(context, {'resource_id': ds['resource_id'], 
+                                                       'force':True})
     # Update fields with datastore_create
     new_ds = p.toolkit.get_action('datastore_create')(context,
             {
                 'resource_id': ds.get('resource_id'),
                 'force':True,
                 'allow_update_with_id':True,
-                'fields': fields
+                'fields': final_fields
                 #'records':[{col_name:''}]
                 })
-    return
+    return final_fields
 
 
-def _interlink_column(context, res, col_name, original_ds, new_ds, reference):
+def _interlink_column(context, res, col_name, original_ds, new_ds, reference, ref_fields):
     res_id = original_ds.get('resource_id')
     total = original_ds.get('total')
     columns = json.loads(res.get('interlinking_columns_status','{}'))
@@ -470,10 +532,16 @@ def _interlink_column(context, res, col_name, original_ds, new_ds, reference):
             columns.update({k:reference})
     columns = json.dumps(columns)
     
+    original_res = p.toolkit.get_action('resource_show')(context, {'id': res.get('interlinking_parent_id')})
+    original_res['interlinked_column'] = col_name
+    original_res = p.toolkit.get_action('resource_update')(context, original_res)
+    
+        
     res = p.toolkit.get_action('resource_show')(context, res)
     res['interlinking_resource'] = True
     res['interlinking_columns_status'] = columns
     res['interlinking_status'] = 'undergoing'
+    res['reference_fields'] = json.dumps(ref_fields)
     res = p.toolkit.get_action('resource_update')(context, res)
     
     STEP = 100
@@ -488,24 +556,53 @@ def _interlink_column(context, res, col_name, original_ds, new_ds, reference):
         nrecs = []
         for rec in recs:
             original_term = rec.get(col_name)
-            suggestions = solr_access.spell_search(original_term, reference)
-            best_suggestion = {'term':'', 'score':0}
-            for suggestion in suggestions:
-                if float(suggestion['score']) > float(best_suggestion['score']):
-                     best_suggestion = suggestion
+            suggestions = lucene_access.search(original_term, reference, 'search')
             
-            nrec = {'_id':rec.get('_id'), 
-                    col_name: best_suggestion['term'], 
-                    col_name+'_score': best_suggestion['score'],
-                    col_name+'_results': json.dumps(suggestions)}
-            nrecs.append(nrec)
-             
+            # If any suggestions were returned
+            if len(suggestions['records']) > 0:
+                # The first field is the field on which the search was run
+                search_field = suggestions['fields'][0]
+                
+                if len(suggestions['records']) > 0:
+                    best_suggestion = suggestions['records'][0]
+                    for suggestion in suggestions['records']:
+                        if suggestion['scoreField'] > best_suggestion['scoreField']:
+                            best_suggestion = suggestion
+                            
+                    nrec = {'_id': rec.get('_id'),
+                            search_field: best_suggestion[search_field],
+                            'int__score': best_suggestion['scoreField'],
+                            'int__checked_flag': False,
+                            'int__all_results': json.dumps(suggestions)}
+                    for field in suggestions['fields']:
+                        if field != search_field and field != 'scoreField':
+                            nrec[field] = best_suggestion[field]
+                    nrecs.append(nrec)
+            # No suggestions were returned         
+            else:
+                real_fields = lucene_access.getFields(reference, False)
+                suggestions = { "fields": real_fields,
+                                "records": [], 
+                               }
+                search_field = real_fields[0]
+                nrec = {'_id': rec.get('_id'),
+                            search_field: "",
+                            'int__score': "",
+                            'int__checked_flag': False,
+                            'int__all_results': json.dumps(suggestions)}
+                for field in suggestions['fields']:
+                        if field != search_field and field != 'scoreField':
+                            nrec[field] = ""
+                nrecs.append(nrec)
+                
+            
         ds = p.toolkit.get_action('datastore_upsert')(context,
                 {
                     'resource_id': new_ds.get('resource_id'),
                     'allow_update_with_id':True,
                     'force': True,
                     'records': nrecs
-                    })           
+                    })
+          
         offset=offset+STEP
     return new_ds

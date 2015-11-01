@@ -51,8 +51,6 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     },
     _onReady: function() {
       //console.log('point 2')
-      //console.log(preload_resource)
-      //console.log(window)
       this.loadPreviewDialog(preload_resource);
       // Context menu `interlinkingHandling`'s options get a data attribute
       $('ul#interlinkingHandling > li#finalizeOption').data({'option': 'finalize-interlinking'})
@@ -118,9 +116,11 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
          */
         if(!(resourceData.on_interlinking_process == 'True')){
             //console.log("Create new");
-            resourceData = int_helper.create(function() {}, function() { 
-            	//console.log('resourceData on loadPreviewDialog Create New')
-            	//console.log(resourceData)
+        	if (typeof dataExplorer != 'undefined' && dataExplorer.interlinked_column != 'undefined')
+        		delete dataExplorer.interlinked_column;
+            var resourceIntData = int_helper.create(function() {}, function() {             	
+            	resourceData.temp_interlinking_resource = resourceIntData.responseJSON.result.id;
+                dataset = new recline.Model.Dataset(resourceData);
             	self.initializeDataset(dataset, resourceData);
             });
             //Need reload in order to move on
@@ -142,6 +142,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         if (this.options.action == 'finalize'){
         	window.top.location.href = this.options.options.return_url;
         }else{
+        	//console.log('point 4.1.0')
 	        dataExplorer.model.fetch().done(function(dataset){
 	        	//console.log('point 4.1.1')
 	            var res = {id: self.options.res_interlink_id, endpoint: self.options.site_url + 'api'};
@@ -175,14 +176,13 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         }
     },
     _onLoad: function(){
-        //console.log('point 5')
+        console.log('point 5')
         dataExplorer.notify({message: 'Loading', loader:true, category: 'warning', persist: true});
-        //setTimeout(function(){ dataExplorer.model.fetch()}, 3000);
+        setTimeout(function(){ dataExplorer.model.fetch()}, 3000);
     },
 
     initializeDataset: function(dataset, resourceData) {
         //console.log('point 6')
-
         var self = this;
 	    function showError(msg){
 	        msg = msg || _('error loading preview');
@@ -201,12 +201,18 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
                     self.updateWithConfirmation(dataset1, options);
                 });              
                 dataset.bind('finalize-interlinking', function(col){
-                    var options = {column_id: col.id,
+                	console.log('------------------------')
+                	console.log(col.name)
+                    var options = {column_id: col.name,
                     				return_url: resourceData.url.substring(0,resourceData.url.indexOf('download'))};
                     self.finalizeWithConfirmation(dataset1, options);
                 });
                 dataset.bind('abort-interlinking', function(col){
+                	// The whole interlinking resource must be deleted
                     var options = {column_id: col.name};
+                    console.log('inside - abort-interlinking')
+                    console.log(col.name)
+                    //var options = {}
                     self.deleteWithConfirmation(dataset1, options); 
                 });
 
@@ -301,11 +307,23 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
       }
     },
     deleteWithConfirmation: function(dataset, options, ld, cb) {
-    	//console.log('point 12')	
+    	console.log('point 12')	
             var ld = ld || this._onLoad;
             var cb = cb || this._onCompleteShow;
+            
+            var no_column_was_given = false;
+            if (typeof options.column_id == 'undefined')
+            	no_column_was_given = true;
+            
             var field_exists = this.checkFieldExists(dataset, options);
-            if (field_exists){
+            field_exists = true;
+            console.log(dataset)
+            console.log(options)
+            console.log(field_exists)
+            console.log(no_column_was_given)
+            
+            
+            if (no_column_was_given || field_exists){
                 this.options.helper = int_helper;
                 this.options.action = 'delete';
                 this.options.options = options;
@@ -318,17 +336,19 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     },
     
     finalizeWithConfirmation: function(dataset, options, ld, cb){
-    	//console.log('point 13')	
+    	console.log('point 13')	
         var ld = ld || this._onLoad;
         var cb = cb || this._onCompleteShow;
         var field_exists = this.checkFieldExists(dataset, options);
+        field_exists = true;
+        this.checkAllFieldsAreFilled(dataset);
         if (field_exists){
             this.options.helper = int_helper;
             this.options.action = 'finalize';
             this.options.options = options;
             this.options.cb = cb;
             this.options.ld = ld;
-            this.confirm(this.i18n('confirm_finalize'));
+            //this.confirm(this.i18n('confirm_finalize'));
         }
         else{
         }       
@@ -352,11 +372,10 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     
     // TOCHECK: Currently not used. Is it usefull to retain it?
     updateWithConfirmation: function(dataset, options, ld, cb) {
-    	//console.log('point 15')
+    	    console.log('point 15')
             var ld = ld || this._onLoad;
             var cb = cb || this._onCompleteShow;
             var field_exists = this.checkFieldExists(dataset, options);
-
             if (field_exists){
                 this.options.helper = int_helper;
                 this.options.action = 'update';
@@ -390,6 +409,12 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     	}
         return field_exists;
     },
+    
+    checkAllFieldsAreFilled: function(dataset){
+    	var records = dataset.records;
+    	console.log(records)
+    },
+    
     confirm: function (text) {
       //console.log('point 17')
       this.sandbox.body.append(this.createModal(text));

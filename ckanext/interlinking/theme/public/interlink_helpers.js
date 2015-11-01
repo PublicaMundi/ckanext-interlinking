@@ -39,6 +39,8 @@ function InterlinkHelper (resource){
                 }
         console.log(url)
         console.log(options)
+        console.log(dataExplorer)
+        dataExplorer.interlinked_column = col_name;
         return this.call_ajax(url, options, ld, cb);           
     }; 
 
@@ -63,9 +65,7 @@ function InterlinkHelper (resource){
                 resource_id: new_res_id
             }
         }
-        
-        console.log(url)
-        console.log(options)
+        delete dataExplorer.interlinked_column;
         return self.call_ajax(url, options, ld, cb);    
     };
     
@@ -100,6 +100,15 @@ function InterlinkHelper (resource){
     this.get_interlinking_references = function(ld, cb){
     	var url = resource.endpoint + '/3/action/interlinking_get_reference_resources';
     	options = {}
+    	return this.call_ajax(url, options, ld, cb);
+    },
+    
+    this.star_search = function (options, ld, cb){
+    	var url = resource.endpoint + '/3/action/interlinking_star_search';
+    	options = {
+    			term: options.term,
+    			reference_resource: options.reference_resource, 
+    	}
     	return this.call_ajax(url, options, ld, cb);
     },
 

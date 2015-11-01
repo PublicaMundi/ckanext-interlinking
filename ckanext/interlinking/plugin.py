@@ -47,6 +47,7 @@ class ReclinePreviewInterlinking(p.SingletonPlugin):
         toolkit.add_public_directory(config, 'theme/public')
         toolkit.add_template_directory(config, 'theme/templates')
         toolkit.add_resource('theme/public', 'ckanext-interlinking')
+        toolkit.add_resource('theme/public/vendor/slickgrid', 'ckanext-interlinking-slickgrid')
     
     # IActions 1/1 function 
     def get_actions(self):
@@ -57,6 +58,10 @@ class ReclinePreviewInterlinking(p.SingletonPlugin):
                 'interlinking_resource_finalize': action.interlinking_resource_finalize,
                 'interlinking_get_reference_resources': action.interlinking_get_reference_resources,
                 'interlinking_resource_download': action.interlinking_resource_download,
+                'interlinking_check_full_interlink': action.interlinking_check_full_interlink,
+                #TODO: remove it
+                'interlinking_temp': action.interlinking_temp,
+                'interlinking_star_search': action.interlinking_star_search,
                 }
     
     # IRoutes 1/1 function (inherit=True)
@@ -103,6 +108,7 @@ class ReclinePreviewInterlinking(p.SingletonPlugin):
                 'interlinking_resource_update': auth.interlinking_resource_update,
                 'interlinking_resource_delete': auth.interlinking_resource_delete,
                 'interlinking_resource_finalize': auth.interlinking_resource_finalize,
+                'interlinking_check_full_interlink': auth.interlinking_check_full_interlink,
                 'interlinking_get_reference_resources': auth.interlinking_get_reference_resources,
                 }
     # ITemplateHelpers 1/1 function    

@@ -32,6 +32,9 @@ def interlinking_resource_delete(context, data_dict):
 def interlinking_resource_finalize(context, data_dict):
     return interlinking_resource_auth(context, data_dict)
 
+def interlinking_check_full_interlink(context, data_dict):
+    return interlinking_resource_auth(context, data_dict)
+
 # TODO: grant auth to all publishers
 def interlinking_get_reference_resources(context, data_dict):
     return interlinking_resource_auth(context, data_dict)

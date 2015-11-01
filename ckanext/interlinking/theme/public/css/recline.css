@@ -91,9 +91,19 @@ body {
 }
 
 .interlinkingResult {
-    background-color: #D4D7E9 !important;
+    background-color: #C6CAE2 !important;
 }
 
 .interlinkingScore {
-    background-color: #EDEEF6 !important;
+    background-color: #D4D7E9 !important;
 }
+
+.InterlinkingAuxField {
+    background-color: #E3E5F1 !important;
+}
+
+.InterlinkinCheckedFlag {
+    background-color: #D4D7E9 !important;
+}
+
+

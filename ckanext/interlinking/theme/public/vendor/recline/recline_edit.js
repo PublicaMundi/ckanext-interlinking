@@ -1402,6 +1402,7 @@ my.Dataset = Backbone.Model.extend({
   //
   // Retrieve dataset and (some) records from the backend.
   fetch: function() {
+	  //console.log('recline_edit.js')
     var self = this;
     var dfd = new Deferred();
 
@@ -4567,16 +4568,24 @@ my.SlickGrid = Backbone.View.extend({
       };
 
       if (field.hostsInterlinkingResult === true)
-    	    column.cssClass = "interlinkingResult";
-      if (field.hostsInterlinkingScore === true)
-    	    column.cssClass = "interlinkingScore";
-      /*
-      if (field.type == 'percentage'){
-    	  column['formatter'] = function(row, cell, value, columnDef, dataContext){
-    		  return value;
-    	  }
+    	  column.cssClass = "interlinkingResult";
+      else if (field.hostsInterlinkingScore === true){
+    	  column.cssClass = "interlinkingScore";
+    	  column.width = 50;
       }
-      */
+      else if (field.hostsInterlinkingAuxField === true)
+    	  column.cssClass = "InterlinkingAuxField";
+      else if (field.hostsInterlinkinCheckedFlag === true){
+    	  column.cssClass = "InterlinkinCheckedFlag";
+    	  column.width = 40;	  
+      }
+      
+      if (field.type == 'boolean'){
+    	  column['formatter'] = function (row, cell, value, columnDef, dataContext) {
+  		    return value ? "<img src='/img/tick.png'>" : "";
+		  }
+      }
+      
         
       var widthInfo = _.find(self.state.get('columnsWidth'),function(c){return c.column === field.id;});
       if (widthInfo){
@@ -4793,10 +4802,14 @@ my.SlickGrid = Backbone.View.extend({
     		var originalFieldId = fields.at(fields.indexOf(selectedField) - 1).id;
     		var scoreFieldId = fields.at(fields.indexOf(selectedField) + 1).id;
     		var resultsFieldId = fields.at(fields.indexOf(selectedField) + 2).id;
+    		
             var ul = $("#termsMenu");
             ul.empty();
-            var originalValue = model.records.at(selctedCell.row).get(originalFieldId)
-            var otherResults = JSON.parse(model.records.at(selctedCell.row).get(resultsFieldId))
+            var originalValue = model.records.at(selctedCell.row).get(originalFieldId)            
+            var otherResults = JSON.parse(model.records.at(selctedCell.row).get(resultsFieldId)).records;
+            console.log(model.records.at(selctedCell.row).get(resultsFieldId))
+
+            var otherFields = JSON.parse(model.records.at(selctedCell.row).get(resultsFieldId)).fields;
             
             //sorting results
             otherResults.sort(_compareInterlinkingResults)
@@ -4810,43 +4823,33 @@ my.SlickGrid = Backbone.View.extend({
             	ul.append('<hr />')
             }*/
             for (var i=0; i < otherResults.length; i++){
-            	ul.append('<li id="termOption" term="' + otherResults[i].term + '" score="' + otherResults[i].score + '">' +
-            			otherResults[i].term + "   (score: "+ Math.round(otherResults[i].score*100) +"%)" + "</li>");
+            	var ul_text = '<li id="termOption"';
+            	ul_text += ' term="' + otherResults[i][otherFields[0]] + '"';
+            	ul_text += ' score="' + otherResults[i][otherFields[1]] + '"';
+            	
+            	// Dealing with interlinking auxiliary fields
+            	for(var j=2; j< otherFields.length; j++){
+            		ul_text += ' ' + otherFields[j] + '="' + otherResults[i][otherFields[j]] + '"';
+            	}
+            	ul_text += '">' + otherResults[i][otherFields[0]] + "   (score: "+ Math.round(otherResults[i][otherFields[1]]*100) +"%)" + "</li>"
+            	ul.append(ul_text);
             }
             ul.append('<hr /><b>Search for another matching term:</b>')
             ul.append('</br><input id="intSearchFld" class="search" type="text" autocomplete="off" placeholder="Type at least 3 characters..." value>')
             //ul.append('</br><text id="intSearchFldMsg"></text>');
             
-            var availableTags = ["Aι Γιαννάκης", "Αβδανίται", "Αβαρίκος", "Αβαρίτσα", "Αβγαριά", "Αβδέλλα", "Αβάντι", 
-                                 "Άβατον", "Αβγόν", "Άβας", "Αβολαδονήσιο", "Αβρακόντες", "Αβλέμονας", "Αβδελλάς", 
-                                 "Αβράμης", "Άβδηρα", "Άβορος", "Αβδού", "Αβία", "Αβραμιάνικα", "Αβραμυλιά", "Αβυσσαλός", 
-                                 "Αβράμιον", "Αβραμιόν", "Αγαλαίοι", "Αγαθόν", "Αγαλάς", "Αγάθη", "Αγγελόκαστρον", "Αγγελοχώριον"];     
-         
-            
             addTextAreaCallback( $( "#intSearchFld" )[0], function (){
 				 var user_term = $("#intSearchFld").val();
 				 //console.log('term>>' + $("#intSearchFld").val())
-				 var ul_inner = $("#matchingTermsMenu");
-				 ul_inner.empty();
-				 var matchesFound = 0;
-				 for (var i = 0; i < availableTags.length; i++){
-					 if( availableTags[i].toLowerCase().indexOf(user_term.toLowerCase()) >= 0 && user_term.length >= 3){
-						 matchesFound++;
-						 ul_inner.append('<li id="usersOption" term="' + availableTags[i] + '">'+ availableTags[i] +'</li>');
-						 console.log(availableTags[i])
-					 }
-				 }
-	        	 
-	        	 if(matchesFound > 0){
-		        	 $("#matchingTermsMenu")
-			        	.css("top", $("#termsMenu").offset().top + $("#termsMenu").height())
-			        	.css("left", $("#termsMenu").offset().left)
-			        	.show();
-	        	 }else{
-	        		 $("#intSearchFld").attr()
-	        	 }
-        	 
-        	 
+				 
+				 var star_search_options  = {
+							'term' :  user_term,
+							'reference_resource': 'kallikratis'
+		
+						}
+				 if (user_term.length >= 3)
+					 int_helper.star_search(star_search_options, function() {}, _onCompleteFetchingStarSearchResults)
+				 
             }, 1000 );
             
             $("#termsMenu")
@@ -4861,15 +4864,44 @@ my.SlickGrid = Backbone.View.extend({
         	    }
         	});
         	
-        	
- 
     	} else{
             $("body").one("click", function () {
                 $("#termsMenu").hide();
     	    	$("#matchingTermsMenu").hide();
              });
     	}
+    }
+    
+    function _onCompleteFetchingStarSearchResults(results){
+       	var fields = results.responseJSON.result.fields;
+    	var hits = results.responseJSON.result.records;
+    	var primaryField = fields[0];
+    	var scoreField = fields[1];
+    	var auxInterlinkFields = [];
+    	for (var i=2; i < fields.length; i++){
+    		auxInterlinkFields.push(fields[i]);
+    	}
+
     	
+    	 var ul_inner = $("#matchingTermsMenu");
+		 ul_inner.empty();
+		 for (var i = 0; i < hits.length; i++){
+			 var ul_inner_text = '<li id="usersOption" term="' + hits[i][primaryField] + '"';
+			 ul_inner_text += ' score="' + hits[i][scoreField] + '"';
+			 for (j=0; j < auxInterlinkFields.length; j++){
+				 ul_inner_text += ' ' + auxInterlinkFields[j] + '="' + hits[i][auxInterlinkFields[j]] + '"';
+			 }
+			 ul_inner_text += '>'+ hits[i][primaryField] +'</li>';
+			 ul_inner.append(ul_inner_text);
+		 }
+    	 if(hits.length > 0){
+        	 $("#matchingTermsMenu")
+	        	.css("top", $("#termsMenu").offset().top + $("#termsMenu").height())
+	        	.css("left", $("#termsMenu").offset().left)
+	        	.show();
+    	 }else{
+    		 ;//$("#intSearchFld").attr()
+    	 }
     }
     
     function addTextAreaCallback(textArea, callback, delay) {
@@ -4919,6 +4951,7 @@ my.SlickGrid = Backbone.View.extend({
       // This context menu apperars only for ordinary columns
       if (	selectedField.get('hostsInterlinkingScore') === true ||
         		selectedField.get('hostsAllInterlinkingResults') === true ||
+        		selectedField.get('hostsInterlinkingAuxField') === true ||
         		selectedField.get('isInterlinked') === true ||
         		selectedField.get('id') === '_id'){
           return;
@@ -4976,6 +5009,17 @@ my.SlickGrid = Backbone.View.extend({
 		var originalFieldId = fields.at(fields.indexOf(selectedField) - 1).id;
 		var scoreFieldId = fields.at(fields.indexOf(selectedField) + 1).id;
 		var resultsFieldId = fields.at(fields.indexOf(selectedField) + 2).id;
+		var checkedFieldId = fields.at(fields.indexOf(selectedField) + 3).id;
+		
+		//Get all interlinking auxiliary fields
+		var int_aux_fields = []
+		var int_aux_field_sufixes = []
+		for (var i=0; i < fields.length; i++){
+			if(fields.at(i).id.substring(0, originalFieldId.length + '_int_aux_'.length) === originalFieldId + '_int_aux_'){
+				int_aux_fields.push(fields.at(i).id);
+				int_aux_field_sufixes.push(fields.at(i).id.substring(originalFieldId.length + '_int_aux_'.length, fields.at(i).id.length))
+			}
+		}
 		
 		var originalValue = model.records.at(selctedCell.row).get(originalFieldId)
         var otherResults = JSON.parse(model.records.at(selctedCell.row).get(resultsFieldId))
@@ -4990,6 +5034,10 @@ my.SlickGrid = Backbone.View.extend({
     	}else if (e.target.id == "termOption"){
     		record.set(intFieldId, $(e.target).attr('term'));
     		record.set(scoreFieldId, $(e.target).attr('score'));
+    		for(var i =0; i< int_aux_fields.length; i++){
+    			record.set(int_aux_fields[i],$(e.target).attr(int_aux_field_sufixes[i]));
+    		}
+    		record.set(checkedFieldId, true);
         	grid.getData().updateItem(record,row);
         	grid.updateRow(row);
     		grid.render();
@@ -5061,18 +5109,41 @@ my.SlickGrid = Backbone.View.extend({
     	var col = selctedCell.cell;
     	var record = Object.create(model.records.models[row]);
 		var intFieldId = selectedField.id;
+		var originalFieldId = fields.at(fields.indexOf(selectedField) - 1).id;
 		var scoreFieldId = fields.at(fields.indexOf(selectedField) + 1).id;
+		var resultsFieldId = fields.at(fields.indexOf(selectedField) + 2).id;
+		var checkedFieldId = fields.at(fields.indexOf(selectedField) + 3).id;
 		
-    	
-    	record.set(intFieldId, $(e.target).attr('term'));
-		record.set(scoreFieldId, '-');
+		var auxFieldIds = [];
+	
+		var interlinkingResults = JSON.parse(record.get(resultsFieldId));
+		
+		var resultsFieldRecord = {};
+		
+		$.each(e.target.attributes, function(i, attrib){
+		     var name = attrib.name;
+		     var value = attrib.value;
+		     
+		     if (name === 'term'){
+		    	 record.set(intFieldId, value);
+		     	 resultsFieldRecord[interlinkingResults.fields[0]] = value;
+		     }
+		     else if (name === 'score'){
+		    	 record.set(scoreFieldId, value);
+		    	 resultsFieldRecord['scoreField'] = value;
+		     }
+		     else if (name !== 'id'){
+		    	 record.set(originalFieldId + '_int_aux_' + name, value);
+		    	 resultsFieldRecord[name] = value;
+		     }
+		  });
+		interlinkingResults.records.push(resultsFieldRecord);
+		record.set(resultsFieldId, JSON.stringify(interlinkingResults));
+		record.set(checkedFieldId, true);
+
     	grid.getData().updateItem(record,row);
     	grid.updateRow(row);
 		grid.render();
-		
-    	//var fields = model.fields;
-    	
-    	console.log($(e.target).text())
     });
     
     
@@ -5097,7 +5168,7 @@ my.SlickGrid = Backbone.View.extend({
     }
     
     function _compareInterlinkingResults(a, b){
-    	return -(a.score - b.score)
+    	return -(a.scoreField - b.scoreField)
     }
     init();
   }
