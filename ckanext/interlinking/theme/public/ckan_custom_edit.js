@@ -1,5 +1,6 @@
 var CKAN = {};
 
+
 var isNodeModule = (typeof module !== 'undefined' && module != null && typeof require !== 'undefined');
 
 if (isNodeModule) {
@@ -9,7 +10,7 @@ if (isNodeModule) {
   module.exports = CKAN;
 }
 
-(function(my) {
+(function foo01(my) {
   my.Client = function(endpoint, apiKey) { 
     this.endpoint = _getEndpoint(endpoint);
     this.apiKey = apiKey;
@@ -40,7 +41,6 @@ if (isNodeModule) {
   my.Client.prototype.datastoreQuery = function(queryObj, cb) {
     var actualQuery = my._normalizeQuery(queryObj);
     var self = this;
-     //console.log('--check 1--') 
     /*
      /*When it comes to sorting a few things have to be done:
       *  a)Determine if the sorting field refers to the original or the temp_interl resource
@@ -64,29 +64,10 @@ if (isNodeModule) {
 		 originalQuery.sort = '_id ' + sort_direction;
      }
      
-     // This function can be used to compare two objects (a,b) based on one of their properties.
-     // direction takes values 'asc' and 'desc' with former being the default one.
-     function compareObjectsCreator(property, direction){
-    	  return function (a, b){
-    		  if (a[property] < b[property])
-	  	   		    result = -1;
-	  	   	  else if (a[property] > b[property])
-	  	   			result = 1;
-	  	   	  else
-	  	   		  return 0;
-	  	   	  
-	  	   	  if (direction == 'desc'){
-	  	   		  return -result
-	  	   	  }else{
-	  	   		  return result
-	  	   	  }
-    	  }
-     } 
      
     this.action('datastore_search', actualQuery, function(err, original_res_results) {
       if (err) {
         cb(err);
-        //console.log('--check 2--')
         return;
       }
       var interlinkingQuery = {
@@ -97,15 +78,10 @@ if (isNodeModule) {
           resource_id: queryObj.interlinking_resource,
           interlinked_column: queryObj.interlinked_column,
       }
-      
-      //var int_helper = new InterlinkHelper(resourceData); 
-      //console.log(int_helper);
-           
-      //console.log('--check 3--')
+                 
       self.action('datastore_search', interlinkingQuery, function(err2, interlink_res_results) {
           if (err2) {
             cb(err2);
-            //console.log('--check 4--')
             return;
           }
      
@@ -115,13 +91,11 @@ if (isNodeModule) {
 	        return field;
 	      });
 
-	      //console.log('--check 5--')
 	      var interlink_res_fields = _.map(interlink_res_results.result.fields, function(field) {
 	        field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
 	        return field;
 	      });
 
-	      //console.log('--check 6--')
 	        var records = [];
 	        var new_fields = [];
 	        if (typeof interlink_res_results != 'undefined'){
@@ -129,24 +103,23 @@ if (isNodeModule) {
 	        }
 	        var int_field_ids = [];
 
+	        interlinking_utility.int_state['interlinked_column'] = interlinking_utility.int_state['interlinked_column'] || interlinkingQuery.interlinked_column; 
+	        var interlinked_column_name = interlinking_utility.int_state['interlinked_column'];
+	        
 	        // For each original field, add it to final fields, and if you find an 
 	        // interlinking field with the same name (but not '_id'), add it after the original one
-	        
-	        if (typeof dataExplorer != 'undefined'){
-	        	var interlinked_column = interlinkingQuery.interlinked_column || dataExplorer.interlinked_column;
-	        }
-	        else {
-	        	var interlinked_column = interlinkingQuery.interlinked_column
-	        }
-	        
+	        interlinking_utility.int_state['backend_columns'] = {};
 	        original_res_fields.forEach(function(fld, idx1){
 	        	var match_found = false;
-	        	if (typeof interlinked_column != 'undefined' && fld.id == interlinked_column && fld.id !== '_id'){
+	        	var current_field;
+	        	if (typeof interlinked_column_name != 'undefined' && 
+	        				fld.id == interlinked_column_name && 
+	        				fld.id !== '_id'){
 	        		new_fields.push(fld);
 	        		// This is the field which the users sees. It contains the best interlinking result,
 	                //   or the user's choice if he has chosen a different result 
 	        		current_field = fields_temp[1];
-	        		var new_fld_id = interlinked_column + '_int'
+	        		var new_fld_id = interlinked_column_name + '_int'
 	        		new_fld = {
 	                            'id': new_fld_id,
 	                            'label': current_field.id,
@@ -160,7 +133,7 @@ if (isNodeModule) {
 	        		
 	        		// This field contains the score of the previous one (best result or user's choice).
 	        		current_field = fields_temp[2];
-	        		new_fld_id = interlinked_column + '_int_score'
+	        		new_fld_id = interlinked_column_name + '_int_score'
                     new_fld = {
                             'id': new_fld_id,
                     		'label': 'score',
@@ -175,7 +148,7 @@ if (isNodeModule) {
 	        		
                     // This field contains all results along with their scores.
                     current_field = fields_temp[3];
-                    new_fld_id = interlinked_column + '_int_results'
+                    new_fld_id = interlinked_column_name + '_int_results'
                     new_fld = {
                             'id': new_fld_id,
                             'type': 'text',
@@ -187,11 +160,11 @@ if (isNodeModule) {
                     // This field is a boolean flag indicating if the user has checked (parcticaly clicked on) 
                     //  an interlinking result by hand 
                     current_field = fields_temp[4];
-                    new_fld_id = interlinked_column + '_int_checked'
+                    new_fld_id = interlinked_column_name + '_int_checked'
                     new_fld = {
                             'id': new_fld_id,
                             'type': 'boolean',
-                            'label': 'check',
+                            'label': 'edit',
                             'hostsInterlinkinCheckedFlag': true,
                             'format': 'boolean',
                         };
@@ -200,10 +173,11 @@ if (isNodeModule) {
                     
 	        		
                     // Adding the rest of the reference fields
+                    interlinking_utility.int_state['auxiliary_columns'] = [];
 	        		fields_temp.forEach(function(fld2, idx2){
 	        			if (idx2 >= 5 ){
 	        				current_field = fld2;
-	        				new_fld_id = interlinked_column + '_int_aux_' + fld2.id;
+	        				new_fld_id = interlinked_column_name + '_int_aux_' + fld2.id;
 	        				new_fld = {
 	                                'id': new_fld_id,
 	                                'label': fld2.id,
@@ -215,7 +189,6 @@ if (isNodeModule) {
 	        			}
 		            });
 	        	}
-	            //console.log('--check 7--')
 	            if(!match_found){
 	            	new_fields.push(fld);
 	            }
@@ -224,25 +197,25 @@ if (isNodeModule) {
 	        
 	        // For each original record, get the respective value of the interlinking records
 	        original_res_results.result.records.forEach(function(rc, idx){
-	        	if (typeof interlinked_column != 'undefined'){
+	        	if (typeof interlinked_column_name != 'undefined'){
 	        		
 		        	// main interlinking field
-		        	var col_id = interlinked_column + '_int';
+		        	var col_id = interlinked_column_name + '_int';
 		        	var val_int = interlink_res_results.result.records[idx][int_field_ids[0]];
 		        	rc[col_id] = val_int;
 		        	
 	        		// score interlinking field
-		        	col_id = interlinked_column + '_int_score';
+		        	col_id = interlinked_column_name + '_int_score';
 		        	val_int = interlink_res_results.result.records[idx][int_field_ids[1]];
 		        	rc[col_id] = val_int;
 		        	
 	        		// checked flag field
-		        	col_id = interlinked_column + '_int_checked';
+		        	col_id = interlinked_column_name + '_int_checked';
 		        	val_int = interlink_res_results.result.records[idx][int_field_ids[2]];
 		        	rc[col_id] = val_int;
 		        	
 	        		// interlinking results field
-		        	col_id = interlinked_column + '_int_results';
+		        	col_id = interlinked_column_name + '_int_results';
 		        	val_int = interlink_res_results.result.records[idx][int_field_ids[3]];
 		        	rc[col_id] = val_int;
 	
@@ -250,7 +223,7 @@ if (isNodeModule) {
 		        	// auxiliary fields from the reference dataset
 		        	interlink_res_fields.forEach(function(fld2, idx2) {
 		        		if (idx2 >= 5){
-		        			col_id = interlinked_column + '_int_aux_' + int_field_ids[idx2-1];
+		        			col_id = interlinked_column_name + '_int_aux_' + int_field_ids[idx2-1];
 		    	        	val_int = interlink_res_results.result.records[idx][int_field_ids[idx2-1]];
 		        			rc[col_id] = val_int;
 		        		}
@@ -259,7 +232,7 @@ if (isNodeModule) {
                 records.push(rc);
 	        });
 	        
-	        var comfunc = compareObjectsCreator(sort_field,sort_direction)
+	        var comfunc = my._compareObjectsCreator(sort_field,sort_direction)
 	        records.sort(comfunc)
 	        
 	        if (originalSortMaster == true){
@@ -287,12 +260,10 @@ if (isNodeModule) {
     actualQuery['allow_update_with_id'] = true;
     actualQuery['force'] = true;
     var updates = queryObj.updates;
-    //console.log(original_column);
     actualQuery['resource_id'] = queryObj.interlinking_resource;
     var records = [];
     var new_updates = [];
     
-  
 	
     // Getting fields info
     var datastore_field_names = {}
@@ -305,7 +276,7 @@ if (isNodeModule) {
     	if (key.indexOf('_int') > 0 && key+'_score' in updates[0] && 
     			key+'_results' in updates[0] && key+ '_checked' in updates[0]){
     		interlinking_column = key
-    		interlinked_column = key.substring(0, key.length -4);
+    		interlinked_column = interlinking_utility.int_state['interlinked_column'];
     		score_column = key + '_score';
     		results_column = key + '_results';
     		checked_column = key + '_checked';
@@ -417,7 +388,7 @@ if (isNodeModule) {
   // Utilities
   // =========
 
-  var _getEndpoint = function(endpoint) {
+  var _getEndpoint = function foo(endpoint) {
     endpoint = endpoint || '/';
     // strip trailing /
     endpoint = endpoint.replace(/\/$/, '');
@@ -427,7 +398,7 @@ if (isNodeModule) {
     return endpoint;
   };
 
-  var _nodeRequest = function(options, cb) {
+  var _nodeRequest = function foo(options, cb) {
     var conf = {
       url: options.url,
       headers: options.headers || {},
@@ -443,7 +414,7 @@ if (isNodeModule) {
     });
   };
 
-  var _browserRequest = function(options, cb) {
+  var _browserRequest = function foo(options, cb) {
     var self = this;
     options.data = encodeURIComponent(JSON.stringify(options.data));
     options.success = function(data) {
@@ -467,7 +438,7 @@ if (isNodeModule) {
   };
 
   // only put in the module namespace so we can access for tests!
-  my._normalizeQuery = function(queryObj) {
+  my._normalizeQuery = function foo(queryObj) {
     var actualQuery = {
       resource_id: queryObj.resource_id,
       q: queryObj.q,
@@ -492,13 +463,32 @@ if (isNodeModule) {
     }
     return actualQuery;
   };
+  
+  // This function can be used to compare two objects (a,b) based on one of their properties.
+  // direction takes values 'asc' and 'desc' with the former being the default one.
+  my._compareObjectsCreator = function foo(property, direction){
+ 	  return function (a, b){
+ 		  if (a[property] < b[property])
+  	   		    result = -1;
+  	   	  else if (a[property] > b[property])
+  	   			result = 1;
+  	   	  else
+  	   		  return 0;
+  	   	  
+  	   	  if (direction == 'desc'){
+  	   		  return -result
+  	   	  }else{
+  	   		  return result
+  	   	  }
+ 	  }
+  } 
 
   // Parse a normal CKAN resource URL and return API endpoint etc
   //
   // Normal URL is something like http://demo.ckan.org/dataset/some-dataset/resource/eb23e809-ccbb-4ad1-820a-19586fc4bebd
   //
   // :return: { resource_id: ..., endpoint: ... }
-  my.parseCkanResourceUrl = function(url) {
+  my.parseCkanResourceUrl = function foo(url) {
     parts = url.split('/');
     var len = parts.length;
     return {
@@ -535,7 +525,7 @@ if (isNodeModule) {
 var recline = recline || {};
 recline.Backend = recline.Backend || {};
 recline.Backend.CkanInterlinkEdit = recline.Backend.CkanInterlinkEdit || {};
-(function(my) {
+(function foo02(my) {
   my.__type__ = 'ckanInterlinkEdit';
 
   // private - use either jQuery or Underscore Deferred depending on what is available
@@ -543,13 +533,9 @@ recline.Backend.CkanInterlinkEdit = recline.Backend.CkanInterlinkEdit || {};
     
   // ### fetch
   my.fetch = function(dataset) {
-	  //console.log('------inside FETCH!!!------')
     var dfd = new Deferred();
     my.query({}, dataset)
       .done(function(data) {
-    	  //console.log('inside fetch .done');
-    	  //console.log(dataset)
-    	  //console.log(data)
         dfd.resolve({
           fields: data.fields,
           records: data.hits

@@ -90,7 +90,6 @@ def interlinking_resource_update_schema():
 def interlinking_resource_delete_schema():
     schema = {
         'resource_id': [not_missing, not_empty, resource_id_exists, unicode],
-        'column_name': [ignore_missing, unicode],
         'force': [ignore_missing, boolean_validator],
         '__junk': [empty],
         '__before': [rename('id', 'resource_id')]
@@ -102,7 +101,6 @@ def interlinking_resource_finalize_schema():
     schema = {
         'package_id': [not_missing, not_empty, unicode, package_id_or_name_exists],
         'resource_id': [not_missing, not_empty, unicode, resource_id_exists],
-        'column_name': [not_missing, not_empty, unicode],
         '__junk': [empty],
         '__before': [rename('id', 'resource_id')]
     }
@@ -126,9 +124,8 @@ def interlinking_get_reference_resources_schema():
     return schema
 
 
-def interlinking_check_full_interlink_schema():
+def interlinking_check_interlink_complete_schema():
     schema = {
-        'package_id': [not_missing, not_empty, unicode, package_id_or_name_exists],
         'resource_id': [not_missing, not_empty, unicode, resource_id_exists],
         'column_name': [not_missing, not_empty, unicode],
         '__junk': [empty],

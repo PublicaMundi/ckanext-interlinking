@@ -1,0 +1,210 @@
+# Greek translations for ckanext-interlinking.
+# Copyright (C) 2015 ORGANIZATION
+# This file is distributed under the same license as the
+# ckanext-interlinking
+# project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2015.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: ckanext-interlinking 0.1\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2015-11-05 15:20+0200\n"
+"PO-Revision-Date: 2015-11-05 15:21+0200\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: el <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 0.9.6\n"
+
+#: ckanext/interlinking/controllers/package.py:45
+#: ckanext/interlinking/controllers/package.py:68
+#: ckanext/interlinking/controllers/package.py:91
+msgid "Resource not found"
+msgstr ""
+
+#: ckanext/interlinking/controllers/package.py:47
+#, python-format
+msgid "Unauthorized to read resource %s"
+msgstr ""
+
+#: ckanext/interlinking/controllers/package.py:81
+msgid "Package not found"
+msgstr "Το σύνολο δεδομένων δεν βρέθηκε"
+
+#: ckanext/interlinking/controllers/package.py:83
+#: ckanext/interlinking/controllers/package.py:93
+msgid "Not authorized to see this page"
+msgstr ""
+
+#: ckanext/interlinking/logic/auth.py:15
+msgid "User {0} not authorized to update resource {1}"
+msgstr ""
+
+#: ckanext/interlinking/theme/public/check_status.js:7
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:12
+msgid "Please Confirm Action"
+msgstr ""
+
+#: ckanext/interlinking/theme/public/check_status.js:8
+msgid "Confirm"
+msgstr ""
+
+#: ckanext/interlinking/theme/public/check_status.js:9
+msgid "Do you want to create new translation?"
+msgstr ""
+
+#: ckanext/interlinking/theme/public/check_status.js:10
+msgid "Resume previous translation?"
+msgstr ""
+
+#: ckanext/interlinking/theme/public/check_status.js:11
+msgid ""
+"Resource translation already exists. Do you want to unpublish and edit "
+"translation?"
+msgstr ""
+
+#: ckanext/interlinking/theme/public/check_status.js:12
+msgid "Cancel"
+msgstr ""
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:13
+msgid "Please Note"
+msgstr ""
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:14
+msgid ""
+"Datastore is disabled. Please enable datastore and try again in order to "
+"proceed with resource interlinking"
+msgstr ""
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:15
+msgid ""
+"Are you sure you want to restore this column to its status before "
+"interlinking take place?"
+msgstr "Είστε σίγουρος ότι θέλετε να επαναφέρετε αυτή την στήλη στην κατάσταση που ήταν πριν λάβει χώρα η διασύνδεση;"
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:16
+msgid "Are you sure you want to update existing column interlinking?"
+msgstr ""
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:17
+msgid "Are you sure you want to restart interlinking on this column?"
+msgstr "Είστε σίγουρος ότι θέλετε να επανεκκινήσετε τη διασύνδεση για αυτή τη στήλη;"
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:18
+msgid ""
+"Finalizing the interlinking process for a column means that its contents "
+"will be update accordingly. Are you sure you want to finalize "
+"interlinking for this column?"
+msgstr ""
+"Οριστικοποιώντας τη διαδικασία διασύνδεσης"
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:19
+msgid "Could not load preview"
+msgstr ""
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:20
+msgid "DataProxy returned an error"
+msgstr ""
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:21
+msgid "DataStore returned an error"
+msgstr ""
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:22
+msgid "Interlink with"
+msgstr "Διασύνδεση με"
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:23
+msgid "Choices"
+msgstr "Επιλογές"
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:24
+msgid "Search for anoter matching term"
+msgstr "Αναζήτηση άλλου όρου"
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:25
+msgid "Interlinking process for this resource cannot be yet finalized. Field '"
+msgstr "Η διαδικασία διασύνδεσεσης δεν μπορει να προχωρήσει για αυτόν τον πόρο. Το πεδίο '"
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:26
+msgid "' has some remaining blank cells"
+msgstr "' έχει κάποια ασυμπλήρωτα κενά"
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:27
+msgid "Ok"
+msgstr "Οκ"
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:28
+msgid "Preview not available for data type: "
+msgstr ""
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:102
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:213
+msgid "error loading preview"
+msgstr ""
+
+#: ckanext/interlinking/theme/templates/recline_interlink.html:8
+msgid "Finalize interlinking"
+msgstr ""
+
+#: ckanext/interlinking/theme/templates/recline_interlink.html:9
+msgid "Abort interlinking"
+msgstr ""
+
+#: ckanext/interlinking/theme/templates/recline_interlink.html:16
+msgid "Save"
+msgstr ""
+
+#: ckanext/interlinking/theme/templates/recline_interlink.html:17
+msgid "Finalize"
+msgstr ""
+
+#: ckanext/interlinking/theme/templates/recline_interlink.html:18
+msgid "Abort"
+msgstr ""
+
+#: ckanext/interlinking/theme/templates/recline_interlink.html:25
+msgid "Loading..."
+msgstr "Φόρτωση..."
+
+#: ckanext/interlinking/theme/templates/package/resource_edit.html:10
+msgid "Interlink"
+msgstr ""
+
+#: ckanext/interlinking/theme/templates/package/resource_interlink.html:15
+msgid "Organizations"
+msgstr ""
+
+#: ckanext/interlinking/theme/templates/package/resource_interlink.html:19
+msgid "Interlinking"
+msgstr ""
+
+#: ckanext/interlinking/theme/templates/package/resource_interlink.html:21
+#: ckanext/interlinking/theme/templates/package/resource_interlink.html:24
+msgid "Datasets"
+msgstr ""
+
+#: ckanext/interlinking/theme/templates/package/resource_interlink.html:25
+msgid "Create Dataset"
+msgstr ""
+
+#: ckanext/interlinking/theme/templates/package/resource_interlink.html:32
+msgid "Interlinking resource"
+msgstr "Διασύνδεση πόρου"
+
+#: ckanext/interlinking/theme/templates/package/resource_interlink.html:42
+msgid "View resource"
+msgstr ""
+
+#: ckanext/interlinking/theme/templates/package/resource_interlink.html:43
+msgid "Edit"
+msgstr ""
+
+#: ckanext/interlinking/theme/templates/package/resource_interlink.html:53
+msgid "Your browser does not support iframes."
+msgstr ""
+

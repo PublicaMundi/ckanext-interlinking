@@ -2,7 +2,9 @@ this.recline = this.recline || {};
 this.recline.Backend = this.recline.Backend || {};
 this.recline.Backend.Ckan = this.recline.Backend.Ckan || {};
 
-(function(my) {
+// Initialize  this.recline.Backend.Ckan. 
+// TODO: check not needed
+(function foo01(my) {
   // ## CKAN Backend
   //
   // This provides connection to the CKAN DataStore (v2)
@@ -36,7 +38,7 @@ this.recline.Backend.Ckan = this.recline.Backend.Ckan || {};
   my.API_ENDPOINT = 'http://datahub.io/api';
 
   // ### fetch
-  my.fetch = function(dataset) {
+  my.fetch = function (dataset) {
     var wrapper;
     if (dataset.endpoint) {
       wrapper = my.DataStore(dataset.endpoint);
@@ -152,12 +154,15 @@ this.recline.Backend.Ckan = this.recline.Backend.Ckan || {};
   };
 
 }(this.recline.Backend.Ckan));
+
 this.recline = this.recline || {};
 this.recline.Backend = this.recline.Backend || {};
 this.recline.Backend.CSV = this.recline.Backend.CSV || {};
 
 // Note that provision of jQuery is optional (it is **only** needed if you use fetch on a remote file)
-(function(my) {
+//Initialize  this.recline.Backend.CSV
+//TODO: check not needed
+(function foo02(my) {
   my.__type__ = 'csv';
 
   // use either jQuery or Underscore Deferred depending on what is available
@@ -236,7 +241,7 @@ this.recline.Backend.CSV = this.recline.Backend.CSV || {};
   //    @param {String} [quotechar='"'] A one-character string used to quote
   //      fields containing special characters, such as the delimiter or
   //      quotechar, or which contain new-line characters. It defaults to '"'
-  //
+  //interlinking_utility.i18n['interlinkWith']
   // Heavily based on uselesscode's JS CSV parser (MIT Licensed):
   // http://www.uselesscode.org/javascript/csv/
   my.parseCSV= function(s, options) {
@@ -274,7 +279,7 @@ this.recline.Backend.CSV = this.recline.Backend.CSV || {};
           field = parseFloat(field, 10);
         }
       }
-      return field;
+      return field;interlinking_utility.i18n['interlinkWith']
     };
 
     for (i = 0; i < s.length; i += 1) {
@@ -349,7 +354,7 @@ this.recline.Backend.CSV = this.recline.Backend.CSV || {};
   //
   // Heavily based on uselesscode's JS CSV serializer (MIT Licensed):
   // http://www.uselesscode.org/javascript/csv/
-  my.serializeCSV= function(dataToSerialize, options) {
+  my.serializeCSV= function (dataToSerialize, options) {
     var a = null;
     if (dataToSerialize instanceof Array) {
       a = dataToSerialize;
@@ -448,7 +453,7 @@ this.recline = this.recline || {};
 this.recline.Backend = this.recline.Backend || {};
 this.recline.Backend.DataProxy = this.recline.Backend.DataProxy || {};
 
-(function(my) {
+(function foo03(my) {
   my.__type__ = 'dataproxy';
   // URL for the dataproxy
   my.dataproxy_url = 'http://jsonpdataproxy.appspot.com';
@@ -523,7 +528,7 @@ this.recline = this.recline || {};
 this.recline.Backend = this.recline.Backend || {};
 this.recline.Backend.ElasticSearch = this.recline.Backend.ElasticSearch || {};
 
-(function($, my) {
+(function foo04($, my) {
   my.__type__ = 'elasticsearch';
 
   // use either jQuery or Underscore Deferred depending on what is available
@@ -808,7 +813,7 @@ this.recline = this.recline || {};
 this.recline.Backend = this.recline.Backend || {};
 this.recline.Backend.GDocs = this.recline.Backend.GDocs || {};
 
-(function(my) {
+(function foo05(my) {
   my.__type__ = 'gdocs';
 
   // use either jQuery or Underscore Deferred depending on what is available
@@ -971,11 +976,12 @@ this.recline.Backend.GDocs = this.recline.Backend.GDocs || {};
     return urls;
   };
 }(this.recline.Backend.GDocs));
+
 this.recline = this.recline || {};
 this.recline.Backend = this.recline.Backend || {};
 this.recline.Backend.Memory = this.recline.Backend.Memory || {};
 
-(function(my) {
+(function foo06(my) {
   my.__type__ = 'memory';
 
   // private data - use either jQuery or Underscore Deferred depending on what is available
@@ -1221,7 +1227,7 @@ this.recline.Backend.Memory = this.recline.Backend.Memory || {};
 this.recline = this.recline || {};
 this.recline.Data = this.recline.Data || {};
 
-(function(my) {
+(function foo07(my) {
 // adapted from https://github.com/harthur/costco. heather rules
 
 my.Transform = {};
@@ -1355,7 +1361,7 @@ if (!('some' in Array.prototype)) {
 this.recline = this.recline || {};
 this.recline.Model = this.recline.Model || {};
 
-(function(my) {
+(function foo08(my) {
 
 // use either jQuery or Underscore Deferred depending on what is available
 var Deferred = _.isUndefined(this.jQuery) ? _.Deferred : jQuery.Deferred;
@@ -1980,7 +1986,7 @@ Backbone.sync = function(method, model, options) {
 this.recline = this.recline || {};
 this.recline.View = this.recline.View || {};
 
-(function($, my) {
+(function foo09($, my) {
 
 // ## Graph view for a Dataset using Flot graphing library.
 //
@@ -2480,7 +2486,7 @@ my.FlotControls = Backbone.View.extend({
 this.recline = this.recline || {};
 this.recline.View = this.recline.View || {};
 
-(function($, my) {
+(function foo10($, my) {
 
 // ## Graph view for a Dataset using Flotr2 graphing library.
 //
@@ -2946,7 +2952,8 @@ this.recline.View.GraphControls = this.recline.View.FlotControls;
 this.recline = this.recline || {};
 this.recline.View = this.recline.View || {};
 
-(function($, my) {
+// Grid View
+(function foo11($, my) {
 // ## (Data) Grid Dataset View
 //
 // Provides a tabular view on a Dataset.
@@ -3212,7 +3219,8 @@ my.GridRow = Backbone.View.extend({
 this.recline = this.recline || {};
 this.recline.View = this.recline.View || {};
 
-(function($, my) {
+// Map View
+(function foo12($, my) {
 
 // ## Map view for a Dataset using Leaflet mapping library.
 //
@@ -3869,7 +3877,8 @@ my.MapMenu = Backbone.View.extend({
 this.recline = this.recline || {};
 this.recline.View = this.recline.View || {};
 
-(function($, my) {
+// Multi View
+(function foo13($, my) {
 // ## MultiView
 //
 // Manage multiple views together along with query editor etc. Usage:
@@ -4443,7 +4452,8 @@ my.setHashQueryString = function(queryParams) {
 this.recline = this.recline || {};
 this.recline.View = this.recline.View || {};
 
-(function($, my) {
+// SlickGrid View
+(function foo14($, my) {
 // ## SlickGrid Dataset View
 //
 // Provides a tabular view on a Dataset, based on SlickGrid.
@@ -4749,8 +4759,8 @@ my.SlickGrid = Backbone.View.extend({
 
 })(jQuery, recline.View);
 
-
-(function ($) {
+// InterlinkingColumnPicker
+(function foo15($) {
   function InterlinkingColumnPicker(model, columns, grid, options) {
     var $menu;
     var column;
@@ -4780,7 +4790,7 @@ my.SlickGrid = Backbone.View.extend({
     
     function _onCompleteGetInterlinkingReferences(results){
         var results = results.responseJSON.result
-        $('<b>Interlink with:</b>').appendTo($menu)
+        $('<b>' + interlinking_utility.i18n['interlinkWith'] + '</b>').appendTo($menu)
         for (var res in results){
         	ref = results[res]
         	
@@ -4815,7 +4825,7 @@ my.SlickGrid = Backbone.View.extend({
             otherResults.sort(_compareInterlinkingResults)
             
             // Creating options context menu
-            ul.append('<b>Choices:</b>')
+            ul.append('<b>'+ interlinking_utility.i18n['interlinkChoices'] +'</b>')
             // Adding the original value
             /*
             ul.append('<li id="originalOption">Original Value: ' + originalValue + '</li>')
@@ -4834,7 +4844,7 @@ my.SlickGrid = Backbone.View.extend({
             	ul_text += '">' + otherResults[i][otherFields[0]] + "   (score: "+ Math.round(otherResults[i][otherFields[1]]*100) +"%)" + "</li>"
             	ul.append(ul_text);
             }
-            ul.append('<hr /><b>Search for another matching term:</b>')
+            ul.append('<hr /><b>' + interlinking_utility.i18n['searchAnotherTerm'] + '</b>')
             ul.append('</br><input id="intSearchFld" class="search" type="text" autocomplete="off" placeholder="Type at least 3 characters..." value>')
             //ul.append('</br><text id="intSearchFldMsg"></text>');
             
@@ -4935,7 +4945,7 @@ my.SlickGrid = Backbone.View.extend({
       
       column = args.column;
 
-      header = {}
+      var header = {}
       header.id = args.column.id;
       header.field = args.column.field;
       header.name = args.column.name
@@ -4948,23 +4958,32 @@ my.SlickGrid = Backbone.View.extend({
                 
       selectedField = model.fields.get(grid.getColumns()[selectedColumnIndex]);
       
+      // This context menu does not appear if allready a column is being interlinked
+      if (typeof interlinking_utility.int_state['interlinked_column'] != 'undefined' &&
+    		  typeof selectedField.get("hostsInterlinkingResult") == 'undefined')
+    	  return
+      
       // This context menu apperars only for ordinary columns
       if (	selectedField.get('hostsInterlinkingScore') === true ||
         		selectedField.get('hostsAllInterlinkingResults') === true ||
+        		selectedField.get('hostsInterlinkinCheckedFlag') === true ||
         		selectedField.get('hostsInterlinkingAuxField') === true ||
         		selectedField.get('isInterlinked') === true ||
         		selectedField.get('id') === '_id'){
           return;
-      }else if (selectedField.get("hostsInterlinkingResult") === true){
+      } else if (selectedField.get("hostsInterlinkingResult") === true){
     	    // This is a context menu with two choices: abort-interlinking and finalize-interlinking 
     	    // It is reserved for a column which is under interlinking
 	        origColumn = grid.getColumns()[selectedColumnIndex];
 	        // set the grid's columns as the new columns
-	        $("#interlinkingHandling")
-	           .css("top", e.pageY )
-	           .css("left", e.pageX  - 25)
-	           .show();
 	        
+	        // 1px is subtracted from X and Y axes in order to force the cursor to be inside this contextmenu 
+	        // (instead of being placed exactly on the border). This allows the mouseleave event be triggered 
+	        // right away without having the cursor having to enter the contextmenu first. 
+	        $("#interlinkingHandling")
+	           .css("top", e.pageY - 1) 
+	           .css("left", e.pageX  - 26)
+	           .show();
 	        $("#interlinkingHandling")
 	        	.bind('mouseleave', function (e) {
 	        		$(this).fadeOut(options.fadeSpeed);
@@ -4976,14 +4995,15 @@ my.SlickGrid = Backbone.View.extend({
 	        $("body").one("click", function () {
 	          $("#interlinkingHandling").hide();
 	        });
+
 	        
       }else{
 	      // Creating context menu for fields' heads
 	      $menu.empty();
 	      var $li, $input;
 	      var interlinking_references = int_helper.get_interlinking_references(function() {}, _onCompleteGetInterlinkingReferences)
-	      $menu.css('top', e.pageY)
-	          .css('left', e.pageX - 25)
+	      $menu.css('top', e.pageY -1)
+	          .css('left', e.pageX - 26)
 	          .fadeIn(options.fadeSpeed);
 	        column = args.column;
       }
@@ -5160,10 +5180,10 @@ my.SlickGrid = Backbone.View.extend({
     	  }  
     	  
       }else if($(e.target).data('option') === 'finalize-interlinking'){
-    	  model.trigger('finalize-interlinking', column);
+    	  model.trigger('finalize-interlinking');
     	  
       }else if($(e.target).data('option') === 'abort-interlinking'){
-    	  model.trigger('abort-interlinking', column);
+    	  model.trigger('abort-interlinking');
       }
     }
     
@@ -5181,7 +5201,8 @@ my.SlickGrid = Backbone.View.extend({
 this.recline = this.recline || {};
 this.recline.View = this.recline.View || {};
 
-(function($, my) {
+// Timeline View
+(function foo16($, my) {
 // turn off unnecessary logging from VMM Timeline
 if (typeof VMM !== 'undefined') {
   VMM.debug = false;
@@ -5354,7 +5375,7 @@ this.recline = this.recline || {};
 this.recline.View = this.recline.View || {};
 
 // Views module following classic module pattern
-(function($, my) {
+(function foo17($, my) {
 
 // ## ColumnTransform
 //
@@ -5485,7 +5506,8 @@ my.Transform = Backbone.View.extend({
 this.recline = this.recline || {};
 this.recline.View = this.recline.View || {};
 
-(function($, my) {
+// FacetViewer
+(function foo18($, my) {
 
 // ## FacetViewer
 //
@@ -5589,7 +5611,8 @@ my.FacetViewer = Backbone.View.extend({
 this.recline = this.recline || {};
 this.recline.View = this.recline.View || {};
 
-(function($, my) {
+// Fields View
+(function foo19($, my) {
 
 my.Fields = Backbone.View.extend({
   className: 'recline-fields-view', 
@@ -5668,7 +5691,8 @@ my.Fields = Backbone.View.extend({
 this.recline = this.recline || {};
 this.recline.View = this.recline.View || {};
 
-(function($, my) {
+// FilterEditor View 
+(function foo20($, my) {
 
 my.FilterEditor = Backbone.View.extend({
   className: 'recline-filter-editor well', 
@@ -5838,7 +5862,8 @@ my.FilterEditor = Backbone.View.extend({
 this.recline = this.recline || {};
 this.recline.View = this.recline.View || {};
 
-(function($, my) {
+// Pager View
+(function foo21($, my) {
 
 my.Pager = Backbone.View.extend({
   className: 'recline-pager', 
@@ -5885,9 +5910,9 @@ my.Pager = Backbone.View.extend({
     }
     newFrom = Math.max(newFrom, 0);
     this.model.set({from: newFrom});
-    console.log('model!');
+    //console.log('model!');
     this.model.trigger('save');
-    console.log(this);
+    //console.log(this);
   },
   render: function() {
     var tmplData = this.model.toJSON();
@@ -5904,7 +5929,8 @@ my.Pager = Backbone.View.extend({
 this.recline = this.recline || {};
 this.recline.View = this.recline.View || {};
 
-(function($, my) {
+// QueryEditor View
+(function foo22($, my) {
 
 my.QueryEditor = Backbone.View.extend({
   className: 'recline-query-editor', 
@@ -5947,7 +5973,8 @@ my.QueryEditor = Backbone.View.extend({
 this.recline = this.recline || {};
 this.recline.View = this.recline.View || {};
 
-(function($, my) {
+// ValueFilter View
+(function foo23($, my) {
 
 my.ValueFilter = Backbone.View.extend({
   className: 'recline-filter-editor well', 

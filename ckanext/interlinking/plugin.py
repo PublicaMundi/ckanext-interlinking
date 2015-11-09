@@ -58,7 +58,7 @@ class ReclinePreviewInterlinking(p.SingletonPlugin):
                 'interlinking_resource_finalize': action.interlinking_resource_finalize,
                 'interlinking_get_reference_resources': action.interlinking_get_reference_resources,
                 'interlinking_resource_download': action.interlinking_resource_download,
-                'interlinking_check_full_interlink': action.interlinking_check_full_interlink,
+                'interlinking_check_interlink_complete': action.interlinking_check_interlink_complete,
                 #TODO: remove it
                 'interlinking_temp': action.interlinking_temp,
                 'interlinking_star_search': action.interlinking_star_search,
@@ -80,7 +80,7 @@ class ReclinePreviewInterlinking(p.SingletonPlugin):
         
         mapper.connect(
                        'interlinking_resource_download',
-                       '/interlinking/download_resource/{resource_id}',
+                       '/dataset/{id}/resource/interlinking/resource/{resource_id}',
                        controller = 'ckanext.interlinking.controllers.package:InterlinkingController',
                        action = 'interlinking_resource_download')
         return mapper
@@ -108,7 +108,7 @@ class ReclinePreviewInterlinking(p.SingletonPlugin):
                 'interlinking_resource_update': auth.interlinking_resource_update,
                 'interlinking_resource_delete': auth.interlinking_resource_delete,
                 'interlinking_resource_finalize': auth.interlinking_resource_finalize,
-                'interlinking_check_full_interlink': auth.interlinking_check_full_interlink,
+                'interlinking_check_interlink_complete': auth.interlinking_check_interlink_complete,
                 'interlinking_get_reference_resources': auth.interlinking_get_reference_resources,
                 }
     # ITemplateHelpers 1/1 function    

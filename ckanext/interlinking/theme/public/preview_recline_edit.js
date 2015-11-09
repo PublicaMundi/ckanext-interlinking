@@ -3,23 +3,31 @@ var dataExplorer;
 
 var errorMsg;
 
+var interlinking_utility = interlinking_utility || {};
+
 this.ckan.module('recline_interlink_preview', function (jQuery, _) {  
   return {
     options: {
       i18n: {
-        heading: _("Please Confirm Action"),
+        heading_confirm: _("Please Confirm Action"),
+        heading_notify: _("Please Note"),
         datastore_disabled: _("Datastore is disabled. Please enable datastore and try again in order to proceed with resource interlinking"),
         confirm_delete: _("Are you sure you want to restore this column to its status before interlinking take place?"),
-        //confirm_update: _("Are you sure you want to update existing column interlinking?"),
+        confirm_update: _("Are you sure you want to update existing column interlinking?"),
         confirm_update: _("Are you sure you want to restart interlinking on this column?"),
         confirm_finalize: _("Finalizing the interlinking process for a column means that its contents will be update accordingly. Are you sure you want to finalize interlinking for this column?"),
         errorLoadingPreview: _("Could not load preview"),
         errorDataProxy: _("DataProxy returned an error"),
         errorDataStore: _("DataStore returned an error"),
         interlinkWith: _("Interlink with:"),
+        interlinkChoices: _("Choices:"),
+        searchAnotherTerm: _("Search for another matching term:"),
+        notCompleteInterlinkNotePartA: _("Interlinking process for this resource cannot be yet finalized. Field '"),
+        notCompleteInterlinkNotePartB: _("' has some remaining blank cells."),
+        ok: _("Ok"),
         previewNotAvailableForDataType: _("Preview not available for data type: ")
       },
-    template: [
+    template_confirm: [
         '<div class="modal">',
         '<div class="modal-header">',
         '<a href="#" class="close" data-dismiss="modal">&times;</a>',
@@ -38,20 +46,52 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         '</div>'
       ].join('\n'),
 
-      site_url: ""
-    },
+    template_notify: [
+         '<div class="modal">',
+         '<div class="modal-header">',
+         '<a href="#" class="close" data-dismiss="modal">&times;</a>',
+         '<h3>Tranlate Column Title</h3>',
+         '</div>',
+         '<div class="modal-body">',
+         '<div class="divDialogElements">',
+         '<label><h4>Column title:</h4></label>',
+         '<input class="medium" id="xlInput" name="xlInput" type="text" />',
+         '</div>',
+         '</div>',
+         '<div class="modal-footer">',
+         '<a href="#" class="btn btn-primary" id="okClicked">OK</a>',
+         '</div>',
+         '</div>'
+       ].join('\n'),
+
+       site_url: ""
+     },
 
     initialize: function () {
-      //console.log('point 1')
       jQuery.proxyAll(this, /_on/);
       this.save_btn = jQuery("#saveClicked");
       this.publish_btn = jQuery("#publishClicked");
-      this.finalize_btn = jQuery("#goResourcesClicked")
+      this.finalize_btn = jQuery("#finalizeClicked");
+      this.abort_btn = jQuery("#abortClicked");
+
+      
+      // Initializing object interlinking_utility
+      // i18n strings
+      interlinking_utility.i18n = interlinking_utility.i18n || {};
+      interlinking_utility.i18n['interlinkWith'] = this.i18n('interlinkWith');
+      interlinking_utility.i18n['interlinkChoices'] = this.i18n('interlinkChoices');
+      interlinking_utility.i18n['searchAnotherTerm'] = this.i18n('searchAnotherTerm');
+      
+      // interlinking state
+      interlinking_utility.int_state = interlinking_utility.int_state || {};
+      // This indicates the current field which is being interlinked. If it is undefined then no 
+      //  is being interlinked.
+      //interlinking_utility.int_state['interlinked_column'] = undefined;
+      
       this.el.ready(this._onReady);
     },
     _onReady: function() {
-      //console.log('point 2')
-      this.loadPreviewDialog(preload_resource);
+            this.loadPreviewDialog(preload_resource);
       // Context menu `interlinkingHandling`'s options get a data attribute
       $('ul#interlinkingHandling > li#finalizeOption').data({'option': 'finalize-interlinking'})
       $('ul#interlinkingHandling > li#abortOption').data({'option': 'abort-interlinking'})      
@@ -68,14 +108,12 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     // Returns nothing.
     loadPreviewDialog: function (resourceData) {
       var self = this;
-      //console.log('point 3')
-      function showError(msg){
+            function showError(msg){
         msg = msg || _('error loading preview');
         window.parent.ckan.pubsub.publish('data-viewer-error', msg);
       }
 
       recline.Backend.DataProxy.timeout = 10000;
-
       // 2 situations
       // a) something was posted to the datastore - need to check for this
       // b) csv or xls (but not datastore)
@@ -106,26 +144,21 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         errorMsg = this.options.i18n.errorLoadingPreview + ': ' + this.options.i18n.errorDataStore;
         
         int_helper = new InterlinkHelper(resourceData); 
-        this.options.res_interlink_id = res_interlink_id = resourceData.temp_interlinking_resource;
+        
 
-        //if (this.options.res_interlink_id === undefined  && !(resourceData.on_interlinking_process == 'True')){
-        /*
-         * 
-        console.log('resourceData on loadPreviewDialog')
-        console.log(resourceData)
-         */
+        
         if(!(resourceData.on_interlinking_process == 'True')){
             //console.log("Create new");
-        	if (typeof dataExplorer != 'undefined' && dataExplorer.interlinked_column != 'undefined')
-        		delete dataExplorer.interlinked_column;
+        	if (typeof interlinking_utility.int_state != 'undefined' && 
+        			typeof interlinking_utility.int_state['interlinked_column'] != 'undefined')
+        		delete interlinking_utility.int_state['interlinked_column'];
             var resourceIntData = int_helper.create(function() {}, function() {             	
-            	resourceData.temp_interlinking_resource = resourceIntData.responseJSON.result.id;
+            	self.options.res_interlink_id = resourceData.temp_interlinking_resource = resourceIntData.responseJSON.result.id;
                 dataset = new recline.Model.Dataset(resourceData);
             	self.initializeDataset(dataset, resourceData);
             });
-            //Need reload in order to move on
-            //Fix this
         }else{
+        	this.options.res_interlink_id = resourceData.temp_interlinking_resource;
             var translationResource = null;
             this.initializeDataset(dataset, resourceData);
         }
@@ -136,15 +169,14 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
       }
     },
     
-    _onCompleteShow: function(){
-        //console.log('point 4.1')    
+    _onCompleteShow: function(res){
         var self = this;
-        if (this.options.action == 'finalize'){
+        if (this.options.action == 'delete'){
         	window.top.location.href = this.options.options.return_url;
-        }else{
-        	//console.log('point 4.1.0')
+        } else if (this.options.action == 'finalize' ){
+        	window.top.location.href = this.options.options.return_url + res.responseJSON.result.interlinked_res_id;
+        } else{
 	        dataExplorer.model.fetch().done(function(dataset){
-	        	//console.log('point 4.1.1')
 	            var res = {id: self.options.res_interlink_id, endpoint: self.options.site_url + 'api'};
 	            int_helper.show_resource(res, function(response){
 	                if (response){
@@ -169,86 +201,84 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     },
     
     _onCompleteGetInterlinkingReferences: function(results){
-        //console.log('point 4.2')  
         var results = results.responseJSON.result
         for (var res in results){
         	ref = results[res]
         }
     },
     _onLoad: function(){
-        console.log('point 5')
         dataExplorer.notify({message: 'Loading', loader:true, category: 'warning', persist: true});
         setTimeout(function(){ dataExplorer.model.fetch()}, 3000);
     },
 
     initializeDataset: function(dataset, resourceData) {
-        //console.log('point 6')
-        var self = this;
+                var self = this;
 	    function showError(msg){
 	        msg = msg || _('error loading preview');
 	        window.parent.ckan.pubsub.publish('data-viewer-error', msg);
 	    }
-	    //console.log('point 6.1')
-        dataset.fetch()
-        	.done(function(dataset1){
-                //console.log('point 6.2')
-                var fields1 = dataset1.fields.models;
-                var records1 = dataset1.records.models;
-                
-                self.initializeDataExplorer(dataset1);
-                dataset.bind('interlink-with', function(col, reference_resource){
-                    var options = {column_id: col.id, reference_resource: reference_resource};
-                    self.updateWithConfirmation(dataset1, options);
-                });              
-                dataset.bind('finalize-interlinking', function(col){
-                	console.log('------------------------')
-                	console.log(col.name)
-                    var options = {column_id: col.name,
-                    				return_url: resourceData.url.substring(0,resourceData.url.indexOf('download'))};
-                    self.finalizeWithConfirmation(dataset1, options);
-                });
-                dataset.bind('abort-interlinking', function(col){
-                	// The whole interlinking resource must be deleted
-                    var options = {column_id: col.name};
-                    console.log('inside - abort-interlinking')
-                    console.log(col.name)
-                    //var options = {}
-                    self.deleteWithConfirmation(dataset1, options); 
-                });
+	    self.initializeDataExplorer(dataset);
+	    
+	    dataset.bind('interlink-with', function(col, reference_resource){
+            var options = {column_id: col.id, reference_resource: reference_resource};
+            self.updateWithConfirmation(dataset, options);
+        }); 
+	    
+	    dataset.bind('finalize-interlinking', function(col){
+            var options = {return_url: resourceData.url.substring(0,resourceData.url.indexOf('resource') + 'resource/'.length),
+            				resource_id: resourceData.temp_interlinking_resource};
+            
+            console.log(options)
 
-                dataset1.queryState.bind('save', function(){
-                    self.sandbox.notify('hello', 'success');
-                    //self.sandbox.client.favoriteDataset(this.button.val()).done(self._onSuccess);                  
-                    dataset1.save();
-                });
+            self.finalizeWithConfirmation(dataset, options);
+        });
+	    
+	    dataset.bind('abort-interlinking', function(col){
+        	// The whole interlinking resource must be deleted
+	    	var return_url = resourceData.url.substring(0,resourceData.url.indexOf('download'))
+	    	if (return_url.length == 0){
+	    		return_url = resourceData.url.replace('interlinking/','');
+	    	}
+        	var options = {
+        					return_url: return_url
+        					}
+        	console.log(options)
+            self.deleteWithConfirmation(dataset, options);
+        });
+	    
+	    dataset.queryState.bind('save', function(){
+            self.sandbox.notify('hello', 'success');
+            //self.sandbox.client.favoriteDataset(this.button.val()).done(self._onSuccess);                  
+            dataset.save();
+        });
+	    
+	    self.save_btn.click(function() {
+            dataset.save();
+        });
+	    
+	    self.finalize_btn.click(function(){
+	    	
+	    });
 
-                self.save_btn.click(function() {
-                    dataset1.save();
-                });
+	    self.abort_btn.click(function(){
+	    	dataset.trigger('abort-interlinking');
+	    });
+        self.publish_btn.click(function() {
+            //TODO: Save before publishing - something doesnt work
+            //dataset.save().done(function(dataset){
+            //int_helper.publish(self._onLoad, function() { window.top.location.href = resourceData.url.substring(0,resourceData.url.indexOf('resource'))})
+            self.publishWithConfirmation(self._onLoad, function() { window.top.location.href = resourceData.url.substring(0,resourceData.url.indexOf('resource'))}); 
+            //});
+        })
+        self.finalize_btn.click(function(){
 
-                self.publish_btn.click(function() {
-                    //TODO: Save before publishing - something doesnt work
-                    //dataset.save().done(function(dataset){
-                    //int_helper.publish(self._onLoad, function() { window.top.location.href = resourceData.url.substring(0,resourceData.url.indexOf('resource'))})
-                    self.publishWithConfirmation(self._onLoad, function() { window.top.location.href = resourceData.url.substring(0,resourceData.url.indexOf('resource'))}); 
-                    //});
-                })
-                self.finalize_btn.click(function(){
-
-                })
-        
-          })
-          .fail(function(error){
-            if (error.message) errorMsg += ' (' + error.message + ')';
-            showError(errorMsg);
-          });
+        })
+          
     },
     _onSuccess: function(e) {
-        //console.log('point 7')
-    },
+            },
     _onEditor: function(column) {
-        //console.log('point 8')
-        var pos = column.name.indexOf('-il');
+                var pos = column.name.indexOf('-il');
         if (pos > -1){
             return  Slick.Editors.Text
         }
@@ -258,8 +288,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     },
     
     initializeDataExplorer: function (dataset) {
-      //console.log('point 9')
-      var views = [
+            var views = [
         {
           id: 'grid',
           label: 'Grid',
@@ -308,71 +337,54 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     },
     deleteWithConfirmation: function(dataset, options, ld, cb) {
     	console.log('point 12')	
-            var ld = ld || this._onLoad;
-            var cb = cb || this._onCompleteShow;
-            
-            var no_column_was_given = false;
-            if (typeof options.column_id == 'undefined')
-            	no_column_was_given = true;
-            
-            var field_exists = this.checkFieldExists(dataset, options);
-            field_exists = true;
-            console.log(dataset)
-            console.log(options)
-            console.log(field_exists)
-            console.log(no_column_was_given)
-            
-            
-            if (no_column_was_given || field_exists){
-                this.options.helper = int_helper;
-                this.options.action = 'delete';
-                this.options.options = options;
-                this.options.cb = cb;
-                this.options.ld = ld;
-                this.confirm(this.i18n('confirm_delete'));
-            }
-            else{
-            }        
+        var ld = ld || this._onLoad;
+        var cb = cb || this._onCompleteShow;
+        
+        var field_exists = this.checkFieldExists(dataset, options);
+        field_exists = true;  
+        
+        if (field_exists){
+            this.options.helper = int_helper;
+            this.options.action = 'delete';
+            this.options.options = options;
+            this.options.cb = cb;
+            this.options.ld = ld;
+            this.confirm(this.i18n('confirm_delete'));
+        }
+        else{
+        }        
     },
     
     finalizeWithConfirmation: function(dataset, options, ld, cb){
     	console.log('point 13')	
+    	console.log('Inside finalizeWithConfirmation')
         var ld = ld || this._onLoad;
         var cb = cb || this._onCompleteShow;
-        var field_exists = this.checkFieldExists(dataset, options);
+        //var field_exists = this.checkFieldExists(dataset, options, ld, cb);
         field_exists = true;
-        this.checkAllFieldsAreFilled(dataset);
+        
+        //this.checkInterlinkingComplete(dataset, options, ld, cb);
+        
         if (field_exists){
             this.options.helper = int_helper;
             this.options.action = 'finalize';
             this.options.options = options;
             this.options.cb = cb;
             this.options.ld = ld;
-            //this.confirm(this.i18n('confirm_finalize'));
+            this.confirm(this.i18n('confirm_finalize'));
         }
         else{
-        }       
+        }            
     },
     
     publishWithConfirmation: function(ld, cp) {
-    	//console.log('point 14')
-    	var interlinking_references = int_helper.get_interlinking_references(function() {}, this._onCompleteGetInterlinkingReferences)
+    	    	var interlinking_references = int_helper.get_interlinking_references(function() {}, this._onCompleteGetInterlinkingReferences)
     	
-    	/*
-        var ld = ld || this._onLoad;
-        var cb = cb || this._onCompleteShow;
-        this.options.helper = int_helper;
-        this.options.action = 'get_interlinking_references';
-        this.options.options = {};
-        this.options.cb = cb;
-        this.options.ld = ld;
-        this.confirm(this.i18n('confirm_publish'));
-        */
     },
     
     // TOCHECK: Currently not used. Is it usefull to retain it?
     updateWithConfirmation: function(dataset, options, ld, cb) {
-    	    console.log('point 15')
+    	    console.log('point 14')
             var ld = ld || this._onLoad;
             var cb = cb || this._onCompleteShow;
             var field_exists = this.checkFieldExists(dataset, options);
@@ -390,8 +402,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     },
     //It checks if a field contains interlinked results (best results and/or user choices)
     checkFieldExists: function(dataset, options){
-    	//console.log('point 16')
-    	// If such a column exists its field id has an '_int' suffix, and another one with tha same id 
+    	    	// If such a column exists its field id has an '_int' suffix, and another one with tha same id 
     	// but without the '_int' ending exists as well
         var col = options.column_id;
     	col = col+'_int'
@@ -410,13 +421,14 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         return field_exists;
     },
     
-    checkAllFieldsAreFilled: function(dataset){
+    checkInterlinkingComplete: function(dataset, options, ld, cb){
+    	console.log('checkInterlinkingComplete');
     	var records = dataset.records;
-    	console.log(records)
+        int_helper['check_interlink_complete'](options, function (){}, this._onCompleteCheckInterlinkingComplete(options, ld, cb));
     },
     
     confirm: function (text) {
-      //console.log('point 17')
+      console.log(' Inside confirm ')
       this.sandbox.body.append(this.createModal(text));
       this.modal.modal('show');
       
@@ -428,42 +440,52 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     },
 
      createModal: function (text) {
-    	 //console.log('point 18')
-      //if (!this.modal) {
+    	 console.log('Inside createModal')
+    	       //if (!this.modal) {
       // re-create modal everytime it is called
-        var element = this.modal = jQuery(this.options.template);
+        var element = this.modal = jQuery(this.options.template_confirm);
         element.on('click', '.btn-primary', this._onConfirmSuccess);
         element.on('click', '.btn-cancel', this._onConfirmCancel);
         element.modal({show: false});
-        element.find('h3').text(this.i18n('heading'));
+        element.find('h3').text(this.i18n('heading_confirm'));
         element.find('.modal-body').text(text);
         
         element.find('.btn-primary').text(this.i18n('confirm'));
         element.find('.btn-cancel').text(this.i18n('cancel'));
+        console.log('Outside createModal')
       //}
       return this.modal;
+    },
+    
+    createNotificationModal: function (text) {
+    console.log('Inside createNotificationModal')
+       var element = this.modal = jQuery(this.options.template_notify);
+       console.log(element)
+       element.on('click', '.btn-primary', this._onConfirmCancel);
+       element.modal({show: false});
+       element.find('h3').text(this.i18n('heading_notify'));
+       element.find('.modal-body').text(text);
+       element.find('.btn-primary').text(this.i18n('ok'));
+     return this.modal;
     },
 
     /* Event handler for the success event */
     _onConfirmSuccess: function (e) {
-    	//console.log('point 19')
-        var h = this.options.helper;
+    	var h = this.options.helper;
         var action = this.options.action;
         var options = this.options.options;
         var ld = this.options.ld;
         var cb = this.options.cb;
-        this.sandbox.body.append(h[action](options, ld, cb));
         this.modal.modal('hide');
+        this.sandbox.body.append(h[action](options, ld, cb));
     },
 
     /* Event handler for the cancel event */
     _onConfirmCancel: function (event) {
-    	//console.log('point 20')
-      this.modal.modal('hide');
+    	      this.modal.modal('hide');
     },
     _onRepaint: function(columns){
-    	//console.log('point 21')
-        var header = jQuery(".data-view-container .slick-header .slick-column-name");
+    	        var header = jQuery(".data-view-container .slick-header .slick-column-name");
         var self = this;
         for (var key in columns){
             var mode = columns[key];
@@ -495,6 +517,33 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         
             });
             }
+        }, 
+    _onCompleteCheckInterlinkingComplete (options, ld, cb){
+        	var self = this;
+        	console.log('Inside _onCompleteCheckInterlinkingComplete')
+        	return function (result){
+	        	if (result.responseJSON.result === false){
+	        		console.log('false!')
+	        		var text = self.i18n('notCompleteInterlinkNotePartA') + options.column_name + self.i18n('notCompleteInterlinkNotePartB'); 
+	        		self.sandbox.body.append(self.createNotificationModal(text));
+	        		self.modal.modal('show');
+	        	    // Center the modal in the middle of the screen.
+	        		self.modal.css({
+	        	        'margin-top': self.modal.height() * -0.5,
+	        	        'top': '50%'
+	        	      });
+	        	}else{
+	        		/*
+	        		console.log('true!')
+        		 	self.options.helper = int_helper;
+        			self.options.action = 'finalize';
+        			self.options.options = options;
+        			self.options.cb = cb;
+        			self.options.ld = ld;
+        			self.confirm(self.i18n('confirm_finalize'));
+        			*/
+	        	}
+	        }
         }
   };
 });

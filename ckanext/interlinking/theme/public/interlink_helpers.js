@@ -11,7 +11,6 @@ function InterlinkHelper (resource){
 
     this.create = function(ld, cb) {
         var url = resource.endpoint + '/3/action/interlinking_resource_create';
-        
         var package_id = this._strip_package_id(resource.url);
         var options = {
             resource_id:resource.id,
@@ -37,54 +36,29 @@ function InterlinkHelper (resource){
                     column_name: col_name,
                     reference_resource: reference_resource
                 }
-        console.log(url)
-        console.log(options)
-        console.log(dataExplorer)
-        dataExplorer.interlinked_column = col_name;
+        interlinking_utility.int_state['interlinked_column'] = col_name;
         return this.call_ajax(url, options, ld, cb);           
     }; 
 
     this.delete = function(options, ld, cb) {
         var options = options || {};
-        var col_name = options.column_id;
-        //console.log(col_name)
         var self = this;
 
         var url = resource.endpoint + '/3/action/interlinking_resource_delete';
         
         var new_res_id = resource.temp_interlinking_resource;
-        
-        if (col_name !== undefined){
-	        var options = {
-	            resource_id: new_res_id,
-	            column_name: col_name
-	        }
+        var options = {
+            resource_id: new_res_id
         }
-        else{
-            var options = {
-                resource_id: new_res_id
-            }
-        }
-        delete dataExplorer.interlinked_column;
+       
+        delete interlinking_utility.int_state['interlinked_column'];
         return self.call_ajax(url, options, ld, cb);    
     };
-    
-    this.publish = function(options, ld, cb) {
-        var url = resource.endpoint + '/3/action/interlinking_resource_finalize';
-        var res_id = resource.id;
-
-        var options = {
-            resource_id:res_id,
-        }
-        console.log(url)
-        console.log(options)   
-        return self.call_ajax(url, options, ld, cb);
-    };
+   
 
     this.finalize = function(options, ld, cb) {
         var url = resource.endpoint + '/3/action/interlinking_resource_finalize';
         var res_id = resource.temp_interlinking_resource;
-        var col_name = options.column_id;
         var return_url = options.return_url;
         
         var package_id = this._strip_package_id(resource.url);
@@ -92,8 +66,8 @@ function InterlinkHelper (resource){
         var options = {
         	package_id: package_id,
         	resource_id: res_id,
-            column_name: col_name,
         }
+        delete interlinking_utility.int_state['interlinked_column'];
         return this.call_ajax(url, options, ld, cb);    
     };
     
@@ -102,6 +76,16 @@ function InterlinkHelper (resource){
     	options = {}
     	return this.call_ajax(url, options, ld, cb);
     },
+    
+    this.check_interlink_complete = function(options, ld, cb){
+    	var url = resource.endpoint + '/3/action/interlinking_check_interlink_complete';
+    	var options = {
+            	resource_id: options.resource_id,
+                column_name: options.column_name,
+            }
+    	return this.call_ajax(url, options, ld, cb);
+    },
+    
     
     this.star_search = function (options, ld, cb){
     	var url = resource.endpoint + '/3/action/interlinking_star_search';
@@ -145,6 +129,8 @@ function InterlinkHelper (resource){
                 complete: cb,
         });    
     },
+    
+    
     
     this.call_ajax = function(url, options, ld, cb) {
     	//console.log('----------------------AJAX-----------------------')
