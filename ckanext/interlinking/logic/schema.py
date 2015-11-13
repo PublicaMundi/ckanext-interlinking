@@ -127,7 +127,6 @@ def interlinking_get_reference_resources_schema():
 def interlinking_check_interlink_complete_schema():
     schema = {
         'resource_id': [not_missing, not_empty, unicode, resource_id_exists],
-        'column_name': [not_missing, not_empty, unicode],
         '__junk': [empty],
         '__before': [rename('id', 'resource_id')]
     }
@@ -138,6 +137,15 @@ def interlinking_star_search_schema():
     schema = {
         'term': [not_missing, not_empty, unicode],
         'reference_resource': [not_missing, not_empty, unicode],
+        '__junk': [empty],
+        '__before': [rename('id', 'resource_id')]
+    }
+    return schema
+
+def interlinking_apply_to_all_schema():
+    schema = {
+        'row_id': [not_missing, not_empty, unicode],
+        'resource_id': [not_missing, not_empty, unicode, resource_id_exists],
         '__junk': [empty],
         '__before': [rename('id', 'resource_id')]
     }

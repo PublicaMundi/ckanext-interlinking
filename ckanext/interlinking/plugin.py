@@ -59,6 +59,7 @@ class ReclinePreviewInterlinking(p.SingletonPlugin):
                 'interlinking_get_reference_resources': action.interlinking_get_reference_resources,
                 'interlinking_resource_download': action.interlinking_resource_download,
                 'interlinking_check_interlink_complete': action.interlinking_check_interlink_complete,
+                'interlinking_apply_to_all': action.interlinking_apply_to_all,
                 #TODO: remove it
                 'interlinking_temp': action.interlinking_temp,
                 'interlinking_star_search': action.interlinking_star_search,
@@ -110,6 +111,7 @@ class ReclinePreviewInterlinking(p.SingletonPlugin):
                 'interlinking_resource_finalize': auth.interlinking_resource_finalize,
                 'interlinking_check_interlink_complete': auth.interlinking_check_interlink_complete,
                 'interlinking_get_reference_resources': auth.interlinking_get_reference_resources,
+                'interlinking_apply_to_all': auth.interlinking_apply_to_all,
                 }
     # ITemplateHelpers 1/1 function    
     def get_helpers(self):

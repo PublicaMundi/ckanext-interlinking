@@ -50,6 +50,22 @@ body {
     padding-top: 12px;
 }
 
+.btn{
+    background-image: none;
+    border-radius:0;
+    box-shadow: none;
+}
+
+.btn-group .btn:last-child{
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.recline-slickgrid .slick-header-columns .slick-header-column{
+    background: '#666';
+    background-image: none;
+}
+
 /* Style for recline-interlinking */
 .contextMenu {
   background: #fff;

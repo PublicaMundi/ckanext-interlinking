@@ -87,6 +87,16 @@ function InterlinkHelper (resource){
     },
     
     
+    this.applyToAll = function(options, ld, cb){    	
+    	var url = resource.endpoint + '/3/action/interlinking_apply_to_all';
+    	var options = {
+            	resource_id: options.resource_id,
+            	row_id: options.row_id,
+            }
+    	return this.call_ajax(url, options, ld, cb);
+    },
+    
+    
     this.star_search = function (options, ld, cb){
     	var url = resource.endpoint + '/3/action/interlinking_star_search';
     	options = {

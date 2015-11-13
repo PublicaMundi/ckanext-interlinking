@@ -271,7 +271,7 @@ def interlinking_resource_finalize(context, data_dict):
     # Remove _id from fields list
     fields.pop(0)
     # Create new final interlinked resource with original fields
-    
+    interlinking_column = json.loads(int_res.get('reference_fields'))[0]['id']
     new_ds = p.toolkit.get_action('datastore_create')(context,
             {
                 'resource_id': new_res.get('id'),
@@ -361,7 +361,7 @@ def interlinking_resource_download(context, data_dict):
     
     res_id = data_dict.get('resource_id')
     
-    # Get resource to check if it is indeed an interlinking resource
+    # Get resource to check if it is indeed an interlinking resourceinterlinking_column = json.loads(int_res.get('reference_fields'))[0]['id']
     res = p.toolkit.get_action('resource_show')(context, {'id': res_id})
     if not res.get('interlinked_resource'):
         raise p.toolkit.ValidationError('Resource "{0}" is not an interlinked resource'.format(res_id))
@@ -429,9 +429,8 @@ def interlinking_check_interlink_complete(context, data_dict):
         raise p.toolkit.ValidationError(errors)
     
     interlinked_resource_id = data_dict.get('resource_id')
-    interlinking_column = data_dict.get('column_name')
-    #interlinking_column = 'int__score'
     int_res = p.toolkit.get_action('resource_show')(context, {'id': interlinked_resource_id})
+    interlinking_column = json.loads(int_res.get('reference_fields'))[0]['id']
     filter = {interlinking_column: ''}
     ds = p.toolkit.get_action('datastore_search')(context, {'resource_id': data_dict.get('resource_id'),
                                                             'fields': interlinking_column,
@@ -441,7 +440,92 @@ def interlinking_check_interlink_complete(context, data_dict):
     else:
         return True
     
+    
+def interlinking_apply_to_all(context, data_dict):
+    p.toolkit.check_access('interlinking_apply_to_all', context, data_dict)
+    
+    schema = context.get('schema', dsschema.interlinking_apply_to_all_schema())
+    data_dict, errors = _validate(data_dict, schema, context)
+    if errors:
+        raise p.toolkit.ValidationError(errors)
+    
+    
+    interlinked_resource_id = data_dict.get('resource_id')
+    int_res = p.toolkit.get_action('resource_show')(context, {'id': interlinked_resource_id})
+    orig_ds = p.toolkit.get_action('datastore_search')(context, {'resource_id': int_res.get('interlinking_parent_id')})
+    row_id = data_dict.get('row_id')
+    original_column_name = [k for (k, v) in json.loads(int_res.get('interlinking_columns_status')).iteritems() if v != 'not-interlinked'][0]
+    interlinked_column_name = json.loads(int_res.get('reference_fields'))[0].get('id')
+    
+    reference_row = p.toolkit.get_action('datastore_search')(context, {
+                                       'resource_id': int_res.get('id'), 
+                                       'filters': {u'_id': row_id}}).get('records')[0]
+                                       
+    original_value = p.toolkit.get_action('datastore_search')(context, {
+                                       'resource_id': int_res.get('interlinking_parent_id'), 
+                                       'fields': [original_column_name],
+                                       'filters': {u'_id': row_id}}).get('records')[0].get(original_column_name)
+                                                                              
+    # It will carry all fields which has to be updated except 'int__all_results' which is treated separately
+    updatable_fields = [u'int__score', u'int__checked_flag']
+    all_result_fields = json.loads(reference_row.get('int__all_results')).get('fields') 
+    for field in all_result_fields:
+        if field != 'scoreField':
+            updatable_fields.append(field)
+            
+    reference_values = {}
+    for field in updatable_fields:
+        reference_values[field] = reference_row.get(field)  
 
+        
+    interlinked_value = reference_values[interlinked_column_name]
+            
+    STEP = 100
+    offset = 0    
+    total = orig_ds.get('total')                        
+    for k in range(0,int(ceil(total/float(STEP)))):
+        offset = k*STEP
+        original_recs = p.toolkit.get_action('datastore_search')(context, {
+                                       'resource_id': int_res.get('interlinking_parent_id'), 
+                                       'offset': offset, 
+                                       'limit': STEP, 
+                                       'fields': [u'_id', original_column_name],
+                                       'sort':'_id'}).get('records')
+        interlinked_recs = p.toolkit.get_action('datastore_search')(context, {
+                                       'resource_id':int_res.get('id'), 
+                                       'offset': offset, 
+                                       'limit': STEP, 
+                                       'sort':'_id'}).get('records') 
+                                       
+        updatable_recs = []
+        for orec, irec in zip(original_recs, interlinked_recs):
+            if orec.get(original_column_name) == original_value:
+                for field in updatable_fields:
+                    irec[field] = reference_values[field]
+                # Updating 'int__all_results' part
+                interlinked_field_values = [rec.get(interlinked_column_name) for rec in json.loads(irec['int__all_results']).get('records')]
+                all_result_fields = json.loads(irec['int__all_results']).get('fields')
+                if interlinked_value not in interlinked_field_values:
+                    new_res_rec = {interlinked_column_name: interlinked_value}
+                    new_res_rec[u'scoreField'] = reference_values[u'int__score']
+                    for field in all_result_fields:
+                        if field != interlinked_column_name and field != 'scoreField':
+                            new_res_rec[field] = reference_values[field]
+                    new_res_recs = json.loads(irec['int__all_results']).get('records')
+                    new_res_recs.append(new_res_rec)
+                    irec['int__all_results'] = json.dumps({'fields': all_result_fields, 'records': new_res_recs})
+                updatable_recs.append(irec)
+                    
+        updated_ds = p.toolkit.get_action('datastore_upsert')(context,
+        {
+            'resource_id': int_res.get('id'),
+            'allow_update_with_id':True,#TOCHECK: Is it used?          
+            'force': True,
+            'records': updatable_recs
+            })
+    return
+                    
+        
 @toolkit.side_effect_free
 #TODO: remove it
 def interlinking_temp(context, data_dict):
@@ -455,7 +539,9 @@ def _initialize_columns(context, col_name, ds, total, reference_resource):
     fields = current_fields
     
     # Get reference dataset's fields that should be stored in datastore
+    pprint.pprint(reference_resource)
     reference_field_names = lucene_access.getFields(reference_resource, True)
+    pprint.pprint(reference_field_names)
 
     # Get fields as they supposed to be stored in the datastore
     final_fields = []

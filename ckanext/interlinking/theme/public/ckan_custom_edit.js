@@ -95,7 +95,7 @@ if (isNodeModule) {
 	        field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
 	        return field;
 	      });
-
+	      	      	
 	        var records = [];
 	        var new_fields = [];
 	        if (typeof interlink_res_results != 'undefined'){
@@ -114,11 +114,13 @@ if (isNodeModule) {
 	        	var current_field;
 	        	if (typeof interlinked_column_name != 'undefined' && 
 	        				fld.id == interlinked_column_name && 
+	        				interlink_res_results.result.records.length > 0 &&
 	        				fld.id !== '_id'){
 	        		new_fields.push(fld);
 	        		// This is the field which the users sees. It contains the best interlinking result,
 	                //   or the user's choice if he has chosen a different result 
 	        		current_field = fields_temp[1];
+	        		interlinking_utility.int_state['interlinking_temp_column'] = current_field.id;
 	        		var new_fld_id = interlinked_column_name + '_int'
 	        		new_fld = {
 	                            'id': new_fld_id,
@@ -137,8 +139,8 @@ if (isNodeModule) {
                     new_fld = {
                             'id': new_fld_id,
                     		'label': 'score',
-                             'type': 'text',
-                            'format': 'float-percentage',
+                            'type': 'text',
+                            'format': 'float',
                             'hostsInterlinkingScore': true
                             // TODO: create a custom renderer	
                         };
@@ -194,10 +196,17 @@ if (isNodeModule) {
 	            }
 
 	        });
-	        
+	        /*
+	        console.log(interlink_res_results)
+	        console.log(interlink_res_results.result)
+	        console.log(interlink_res_results.result.records[0])
+	        console.log(int_field_ids[0])
+	        console.log(interlink_res_results.result.records[0][int_field_ids[0]])
+	        console.log(interlinked_column_name)
+	        */
 	        // For each original record, get the respective value of the interlinking records
 	        original_res_results.result.records.forEach(function(rc, idx){
-	        	if (typeof interlinked_column_name != 'undefined'){
+	        	if (typeof interlinked_column_name != 'undefined' && interlink_res_results.result.records.length > 0){
 	        		
 		        	// main interlinking field
 		        	var col_id = interlinked_column_name + '_int';
@@ -284,13 +293,14 @@ if (isNodeModule) {
     		break;
     	}
     }
-    
-    datastore_field_names[interlinking_column] = original_fields[0];
-    datastore_field_names[score_column] = 'int__score';
-    datastore_field_names[results_column] = 'int__all_results';
-    datastore_field_names[checked_column] = 'int__checked_flag';
-    for (var i=2; i< original_fields.length; i++){
-    	datastore_field_names[interlinked_column + '_int_aux_' + original_fields[i]] = original_fields[i];
+    if(updates.length > 0){
+	    datastore_field_names[interlinking_column] = original_fields[0];
+	    datastore_field_names[score_column] = 'int__score';
+	    datastore_field_names[results_column] = 'int__all_results';
+	    datastore_field_names[checked_column] = 'int__checked_flag';
+	    for (var i=2; i< original_fields.length; i++){
+	    	datastore_field_names[interlinked_column + '_int_aux_' + original_fields[i]] = original_fields[i];
+	    }
     }
      
     updates.forEach(function(upd, idx){  	
@@ -567,7 +577,7 @@ recline.Backend.CkanInterlinkEdit = recline.Backend.CkanInterlinkEdit || {};
       wrapper = new CKAN.Client(out.endpoint);
     }
     queryObj.resource_id = dataset.id;
-    queryObj.interlinking_resource = dataset.temp_interlinking_resource; 
+    queryObj.interlinking_resource = dataset.temp_interlinking_resource;
     queryObj.interlinked_column = dataset.interlinked_column;
         
     wrapper.datastoreQuery(queryObj, function(err, out) {
