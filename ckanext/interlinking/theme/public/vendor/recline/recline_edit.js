@@ -349,7 +349,6 @@ my.Dataset = Backbone.Model.extend({
   //
   // Retrieve dataset and (some) records from the backend.
   fetch: function() {
-	  //console.log('recline_edit.js')
     var self = this;
     var dfd = new Deferred();
 
@@ -751,9 +750,8 @@ my.Field = Backbone.Model.extend({
       } else if (format == 'plain') {
         return val;
       }else if (format === 'float') {
-    	  if (val == Number(val)){
+    	  if (val == Number(val) & val != ''){
     		  return parseFloat(val).toFixed(4);
-    		  
     	  }else
     		  return val
       }else if(format === 'float-percentage') {
@@ -1277,18 +1275,6 @@ my.MultiView = Backbone.View.extend({
     this.updateNav(viewName);
     this.state.set({currentView: viewName});
   },
-  /*
-  _onTranslateClick: function(e){
-    e.preventDefault();
-    //console.log('Translate button clicked!');
-    if (this.mode == "default"){
-        this.mode = "translate";
-    }
-    else{
-        this.mode = "default";
-    }
-
-  },*/
 
   // create a state object for this view and do the job of
   // 
@@ -1911,11 +1897,9 @@ my.SlickGrid = Backbone.View.extend({
             
             addTextAreaCallback( $( "#intSearchFld" )[0], function (){
 				 var user_term = $("#intSearchFld").val();
-				 //console.log('term>>' + $("#intSearchFld").val())
-				 
 				 var star_search_options  = {
 							'term' :  user_term,
-							'reference_resource': 'kallikratis'
+							'reference_resource': interlinking_utility.int_state['reference_resource']
 		
 						}
 				 if (user_term.length >= 3)
@@ -1960,7 +1944,7 @@ my.SlickGrid = Backbone.View.extend({
 			 var ul_inner_text = '<li id="usersOption" term="' + hits[i][primaryField] + '"';
 			 ul_inner_text += ' score="' + hits[i][scoreField] + '"';
 			 for (j=0; j < auxInterlinkFields.length; j++){
-				 ul_inner_text += ' ' + auxInterlinkFields[j] + '="' + hits[i][auxInterlinkFields[j]] + '"';
+				 ul_inner_text += ' ' + auxInterlinkFields[j].toLowerCase() + '="' + hits[i][auxInterlinkFields[j]] + '"';
 			 }
 			 ul_inner_text += '>'+ hits[i][primaryField] +'</li>';
 			 ul_inner.append(ul_inner_text);
@@ -2121,7 +2105,6 @@ my.SlickGrid = Backbone.View.extend({
     		grid.render();
     		dataExplorer.model.save();
     	} else if(e.target.id =="applyAllOption"){
-    		console.log(row_id)
     		model.trigger('applyToAll', row_id, originalValue, selectedValue);
     	}
 		$("#termsMenu").hide();
@@ -2156,6 +2139,7 @@ my.SlickGrid = Backbone.View.extend({
 		var resultsFieldRecord = {};
 		
 		$.each(e.target.attributes, function(i, attrib){
+			
 		     var name = attrib.name;
 		     var value = attrib.value;
 		     
@@ -2172,8 +2156,10 @@ my.SlickGrid = Backbone.View.extend({
 		    	 resultsFieldRecord[name] = value;
 		     }
 		  });
-		interlinkingResults.records.push(resultsFieldRecord);
-		record.set(resultsFieldId, JSON.stringify(interlinkingResults));
+		if (_.pluck(interlinkingResults.records, interlinkingResults.fields[0]).indexOf(resultsFieldRecord[interlinkingResults.fields[0]])){
+			interlinkingResults.records.push(resultsFieldRecord);
+			record.set(resultsFieldId, JSON.stringify(interlinkingResults));
+		}
 		record.set(checkedFieldId, true);
     	grid.getData().updateItem(record,row);
     	grid.updateRow(row);
@@ -2393,7 +2379,6 @@ my.Pager = Backbone.View.extend({
     this.render();
   },
   onFormSubmit: function(e) {
-      console.log('onformsubmit');
     e.preventDefault();
     var newFrom = parseInt(this.el.find('input[name="from"]').val());
     var newSize = parseInt(this.el.find('input[name="to"]').val()) - newFrom;
@@ -2403,7 +2388,6 @@ my.Pager = Backbone.View.extend({
     this.model.trigger('save');
   },
   onPaginationUpdate: function(e) {
-    console.log('onppagination update');
     e.preventDefault();
     var $el = $(e.target);
     var newFrom = 0;
@@ -2414,9 +2398,7 @@ my.Pager = Backbone.View.extend({
     }
     newFrom = Math.max(newFrom, 0);
     this.model.set({from: newFrom});
-    //console.log('model!');
     this.model.trigger('save');
-    //console.log(this);
   },
   render: function() {
     var tmplData = this.model.toJSON();

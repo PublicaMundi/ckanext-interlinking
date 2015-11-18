@@ -89,8 +89,7 @@ def interlinking_resource_create(context, data_dict):
                 #  "undergoing": A column has been chosen for interlinking and the process is undergoing
                 'interlinking_status': 'not-started',
                 'state': 'active',  
-                'interlinking_columns_status':columns_status,
-                'interlinking_columns': '{}' #TOCHECK: Is it needed?
+                'interlinking_columns_status':columns_status
             })
     
     temp_interlinking_resource = new_res.get('id')    
@@ -149,9 +148,12 @@ def interlinking_resource_update(context, data_dict):
             break
     if not field_exists:
         raise p.toolkit.ValidationError('Column name "{0}" does not correspond to any "{1}" table columns'.format(data_dict.get('column_name'),res.get('interlinking_parent_id')))
-    
     ref_fields = _initialize_columns(context, col_name, ds, original_ds.get('total'), reference_resource)
-    _interlink_column(context, res, col_name, original_ds, ds, reference_resource, ref_fields)
+    if isinstance(ref_fields, int) and ref_fields == -1:
+        raise p.toolkit.ValidationError('Internal Server Error occurred')
+    res = _interlink_column(context, res, col_name, original_ds, ds, reference_resource, ref_fields)
+    if isinstance(res, int) and ref_fields == -1:
+        raise p.toolkit.ValidationError('Internal Server Error occurred')
     return
 
     
@@ -417,7 +419,11 @@ def interlinking_star_search(context, data_dict):
     term = data_dict.get('term')
     reference_resource = data_dict.get('reference_resource')
     
-    return lucene_access.search(term, reference_resource, 'like')
+    terms = lucene_access.search(term, reference_resource, 'like')
+    if isinstance(terms, int):
+        return ''
+    
+    return terms
 
 
 def interlinking_check_interlink_complete(context, data_dict):
@@ -530,8 +536,10 @@ def interlinking_apply_to_all(context, data_dict):
 #TODO: remove it
 def interlinking_temp(context, data_dict):
     #suggestions = lucene_access.search('Νέας Ιωνίας', 'kallikratis')
-    suggestions = lucene_access.getFields('kallikratis')
-        
+    suggestions = lucene_access.getFields('kallikratis', True)
+    if isinstance(suggestions, list):
+        print suggestions
+
 
 def _initialize_columns(context, col_name, ds, total, reference_resource):
     # Get current datastore's fields
@@ -539,55 +547,55 @@ def _initialize_columns(context, col_name, ds, total, reference_resource):
     fields = current_fields
     
     # Get reference dataset's fields that should be stored in datastore
-    pprint.pprint(reference_resource)
     reference_field_names = lucene_access.getFields(reference_resource, True)
-    pprint.pprint(reference_field_names)
-
-    # Get fields as they supposed to be stored in the datastore
-    final_fields = []
-    final_fields.append({'id': reference_field_names[0], 'type': 'text'})
-    final_fields.append({'id': u"int__score", 'type': 'text'})
-    final_fields.append({'id': u"int__checked_flag", 'type': 'boolean'})
-    final_fields.append({'id': u"int__all_results", 'type': 'text'})
-    for field in reference_field_names:
-        if field != reference_field_names[0]:
-            final_fields.append({'id': field, 'type': 'text'})
-    
-    # Check that all final_fields already exist in the datastore
-    datastore_recreation_needed = False
-    for final_field in final_fields:
-        exists = False
-        for current_field in current_fields:
-            if final_field['id'] == current_field['id']:
-                exists = True
+    if isinstance(reference_field_names, list):
+        # Get fields as they supposed to be stored in the datastore
+        final_fields = []
+        final_fields.append({'id': reference_field_names[0], 'type': 'text'})
+        final_fields.append({'id': u"int__score", 'type': 'text'})
+        final_fields.append({'id': u"int__checked_flag", 'type': 'boolean'})
+        final_fields.append({'id': u"int__all_results", 'type': 'text'})
+        for field in reference_field_names:
+            if field != reference_field_names[0]:
+                final_fields.append({'id': field, 'type': 'text'})
+        
+        # Check that all final_fields already exist in the datastore
+        datastore_recreation_needed = False
+        for final_field in final_fields:
+            exists = False
+            for current_field in current_fields:
+                if final_field['id'] == current_field['id']:
+                    exists = True
+                    break
+            if exists == False:
+                datastore_recreation_needed = True
                 break
-        if exists == False:
-            datastore_recreation_needed = True
-            break
-    
-    if datastore_recreation_needed == False:
-        return
-    
-    # Drop and recreate datastore table
-    p.toolkit.get_action('datastore_delete')(context, {'resource_id': ds['resource_id'], 
-                                                       'force':True})
-    # Update fields with datastore_create
-    new_ds = p.toolkit.get_action('datastore_create')(context,
-            {
-                'resource_id': ds.get('resource_id'),
-                'force':True,
-                'allow_update_with_id':True,
-                'fields': final_fields
-                #'records':[{col_name:''}]
-                })
-    return final_fields
+        
+        if datastore_recreation_needed == False:
+            return
+        
+        # Drop and recreate datastore table
+        p.toolkit.get_action('datastore_delete')(context, {'resource_id': ds['resource_id'], 
+                                                           'force':True})
+        # Update fields with datastore_create
+        new_ds = p.toolkit.get_action('datastore_create')(context,
+                {
+                    'resource_id': ds.get('resource_id'),
+                    'force':True,
+                    'allow_update_with_id':True,
+                    'fields': final_fields
+                    #'records':[{col_name:''}]
+                    })
+        return final_fields
+    else:
+        # It carries -1 value as an error code
+        return reference_field_names
 
 
 def _interlink_column(context, res, col_name, original_ds, new_ds, reference, ref_fields):
     res_id = original_ds.get('resource_id')
     total = original_ds.get('total')
     columns = json.loads(res.get('interlinking_columns_status','{}'))
-
     # The interlinked column is marked with the reference resource with which it is interlinked.
     for k,v in columns.iteritems():
         if k == col_name:
@@ -597,7 +605,6 @@ def _interlink_column(context, res, col_name, original_ds, new_ds, reference, re
     original_res = p.toolkit.get_action('resource_show')(context, {'id': res.get('interlinking_parent_id')})
     original_res['interlinked_column'] = col_name
     original_res = p.toolkit.get_action('resource_update')(context, original_res)
-    
         
     res = p.toolkit.get_action('resource_show')(context, res)
     res['interlinking_resource'] = True
@@ -620,6 +627,8 @@ def _interlink_column(context, res, col_name, original_ds, new_ds, reference, re
             original_term = rec.get(col_name)
             suggestions = lucene_access.search(original_term, reference, 'search')
             
+            if isinstance(suggestions, int):
+                return -1
             # If any suggestions were returned
             if len(suggestions['records']) > 0:
                 # The first field is the field on which the search was run
@@ -643,19 +652,22 @@ def _interlink_column(context, res, col_name, original_ds, new_ds, reference, re
             # No suggestions were returned         
             else:
                 real_fields = lucene_access.getFields(reference, False)
-                suggestions = { "fields": real_fields,
-                                "records": [], 
-                               }
-                search_field = real_fields[0]
-                nrec = {'_id': rec.get('_id'),
-                            search_field: "",
-                            'int__score': "",
-                            'int__checked_flag': False,
-                            'int__all_results': json.dumps(suggestions)}
-                for field in suggestions['fields']:
-                        if field != search_field and field != 'scoreField':
-                            nrec[field] = ""
-                nrecs.append(nrec)
+                if isinstance(real_fields, list):
+                    suggestions = { "fields": real_fields,
+                                    "records": [], 
+                                   }
+                    search_field = real_fields[0]
+                    nrec = {'_id': rec.get('_id'),
+                                search_field: "",
+                                'int__score': "",
+                                'int__checked_flag': False,
+                                'int__all_results': json.dumps(suggestions)}
+                    for field in suggestions['fields']:
+                            if field != search_field and field != 'scoreField':
+                                nrec[field] = ""
+                    nrecs.append(nrec)
+                else:
+                    return -1
                 
             
         ds = p.toolkit.get_action('datastore_upsert')(context,

@@ -52,6 +52,7 @@ function InterlinkHelper (resource){
         }
        
         delete interlinking_utility.int_state['interlinked_column'];
+        delete interlinking_utility.int_state['reference_resource'];
         return self.call_ajax(url, options, ld, cb);    
     };
    
@@ -68,6 +69,7 @@ function InterlinkHelper (resource){
         	resource_id: res_id,
         }
         delete interlinking_utility.int_state['interlinked_column'];
+        delete interlinking_utility.int_state['reference_resource'];
         return this.call_ajax(url, options, ld, cb);    
     };
     
@@ -123,11 +125,10 @@ function InterlinkHelper (resource){
         });    
     },
 
-    this.show_resource =  function(resource, cb) {
-
+    this.show_resource =  function(resource_id, cb) {
     	var url = resource.endpoint + '/3/action/resource_show';
         var options = {
-            id: resource.id,
+            id: resource_id,
         }
         
         return $.ajax({
@@ -142,9 +143,7 @@ function InterlinkHelper (resource){
     
     
     
-    this.call_ajax = function(url, options, ld, cb) {
-    	//console.log('----------------------AJAX-----------------------')
-    	//console.log(options)		
+    this.call_ajax = function(url, options, ld, cb) {	
         return $.ajax({
             type: "POST",
             url: url,
@@ -157,13 +156,9 @@ function InterlinkHelper (resource){
                 return response;
             },
             failure: function(response) {
-                //console.log('failed');
-                //console.log(response);
+
             },
             error: function(response) {
-                //if (response.status == 409){
-                //    return;
-                //}
                 console.log('error');
                 console.log(response);
                 alert('Error: .\n' + response.status + ':' + response.responseText);
@@ -179,13 +174,9 @@ function InterlinkHelper (resource){
                 return response;
             },
             failure: function(response) {
-                //console.log('failed');
-                //console.log(response);
+
             },
             error: function(response) {
-                //if (response.status == 409){
-                //    return;
-                //}
                 console.log('error');
                 console.log(response);
                 alert('Error: .\n' + response.status + ':' + response.responseText);

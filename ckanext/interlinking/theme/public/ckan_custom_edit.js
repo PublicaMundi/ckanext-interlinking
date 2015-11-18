@@ -63,13 +63,12 @@ if (isNodeModule) {
          originalQuery = actualQuery;
 		 originalQuery.sort = '_id ' + sort_direction;
      }
-     
-     
     this.action('datastore_search', actualQuery, function(err, original_res_results) {
       if (err) {
         cb(err);
         return;
       }
+      
       var interlinkingQuery = {
           limit: actualQuery.limit,
           offset: actualQuery.offset,
@@ -78,7 +77,25 @@ if (isNodeModule) {
           resource_id: queryObj.interlinking_resource,
           interlinked_column: queryObj.interlinked_column,
       }
-                 
+	  
+      int_helper.show_resource(queryObj.interlinking_resource, function(response){
+	      if (response){
+	          var columns= {};
+	          try{
+	              columns = JSON.parse(response.responseJSON.result.interlinking_columns_status);
+	              for (var key in columns){
+	              	if (columns[key] !== 'not-interlinked'){
+	              		interlinking_utility.int_state['reference_resource'] = interlinking_utility.int_state['reference_resource'] || columns[key];
+	              		interlinking_utility.int_state['interlinked_column'] = interlinking_utility.int_state['interlinked_column'] || key;
+	              		break;
+	              	}
+	              }
+	          }
+	          catch(err) {
+	          }
+	      }
+	  });
+  
       self.action('datastore_search', interlinkingQuery, function(err2, interlink_res_results) {
           if (err2) {
             cb(err2);
@@ -179,7 +196,7 @@ if (isNodeModule) {
 	        		fields_temp.forEach(function(fld2, idx2){
 	        			if (idx2 >= 5 ){
 	        				current_field = fld2;
-	        				new_fld_id = interlinked_column_name + '_int_aux_' + fld2.id;
+	        				new_fld_id = interlinked_column_name + '_int_aux_' + fld2.id.toLowerCase();
 	        				new_fld = {
 	                                'id': new_fld_id,
 	                                'label': fld2.id,
@@ -196,14 +213,7 @@ if (isNodeModule) {
 	            }
 
 	        });
-	        /*
-	        console.log(interlink_res_results)
-	        console.log(interlink_res_results.result)
-	        console.log(interlink_res_results.result.records[0])
-	        console.log(int_field_ids[0])
-	        console.log(interlink_res_results.result.records[0][int_field_ids[0]])
-	        console.log(interlinked_column_name)
-	        */
+
 	        // For each original record, get the respective value of the interlinking records
 	        original_res_results.result.records.forEach(function(rc, idx){
 	        	if (typeof interlinked_column_name != 'undefined' && interlink_res_results.result.records.length > 0){
@@ -232,7 +242,7 @@ if (isNodeModule) {
 		        	// auxiliary fields from the reference dataset
 		        	interlink_res_fields.forEach(function(fld2, idx2) {
 		        		if (idx2 >= 5){
-		        			col_id = interlinked_column_name + '_int_aux_' + int_field_ids[idx2-1];
+		        			col_id = interlinked_column_name + '_int_aux_' + int_field_ids[idx2-1].toLowerCase();
 		    	        	val_int = interlink_res_results.result.records[idx][int_field_ids[idx2-1]];
 		        			rc[col_id] = val_int;
 		        		}
@@ -299,7 +309,7 @@ if (isNodeModule) {
 	    datastore_field_names[results_column] = 'int__all_results';
 	    datastore_field_names[checked_column] = 'int__checked_flag';
 	    for (var i=2; i< original_fields.length; i++){
-	    	datastore_field_names[interlinked_column + '_int_aux_' + original_fields[i]] = original_fields[i];
+	    	datastore_field_names[interlinked_column + '_int_aux_' + original_fields[i].toLowerCase()] = original_fields[i];
 	    }
     }
      
@@ -537,7 +547,6 @@ recline.Backend = recline.Backend || {};
 recline.Backend.CkanInterlinkEdit = recline.Backend.CkanInterlinkEdit || {};
 (function foo02(my) {
   my.__type__ = 'ckanInterlinkEdit';
-
   // private - use either jQuery or Underscore Deferred depending on what is available
   var Deferred = _.isUndefined(this.jQuery) ? _.Deferred : jQuery.Deferred;
     
@@ -559,7 +568,6 @@ recline.Backend.CkanInterlinkEdit = recline.Backend.CkanInterlinkEdit || {};
   };
 
   my.query = function(queryObj, dataset) {
-	  //console.log('------inside QUERY!!!------')
     var dfd = new Deferred()
       , wrapper
       ;

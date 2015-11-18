@@ -49,7 +49,6 @@ class InterlinkingController(BaseController):
             return render('recline_interlink.html')
         
     def interlinking_resource_download(self, id, resource_id):
-        print '----------------INSIDE interlinking_resource_download --------------------'
         context = {
             'model': model,
             'session': model.Session,

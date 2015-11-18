@@ -95,7 +95,6 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
       interlinking_utility.int_state = interlinking_utility.int_state || {};
       // This indicates the current field which is being interlinked. If it is undefined then no 
       //  is being interlinked.
-      //interlinking_utility.int_state['interlinked_column'] = undefined;
       
       this.el.ready(this._onReady);
     },
@@ -157,7 +156,6 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
 
         
         if(!(resourceData.on_interlinking_process == 'True')){
-            //console.log("Create new");
         	if (typeof interlinking_utility.int_state != 'undefined' && 
         			typeof interlinking_utility.int_state['interlinked_column'] != 'undefined')
         		delete interlinking_utility.int_state['interlinked_column'];
@@ -187,20 +185,25 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         } else{
 	        dataExplorer.model.fetch().done(function(dataset){
 	            var res = {id: self.options.res_interlink_id, endpoint: self.options.site_url + 'api'};
-	            int_helper.show_resource(res, function(response){
+	            int_helper.show_resource(res.id, function(response){
 	                if (response){
 	                    var columns= {};
 	                    try{
 	                        columns = JSON.parse(response.responseJSON.result.interlinking_columns_status);
 	                        self.options.columns = columns;
+	                        for (var col in columns){
+	                        	if (columns[col] !== 'not-interlinked'){
+	                        		interlinking_utility.int_state['reference_resource'] = columns[col];
+	                        		interlinking_utility.int_state['interlinked_column'] = col;
+	                        		break;
+	                        	}
+	                        }
 	                        //self._onRepaint(columns);
 	                    }
 	                    catch(err) {
-	                        //console.log('point oops');
 	                    }
 	                }
 	                else{
-	                    //console.log('point resource fetch failed');
 	                }
 	            });
 	        });
@@ -333,14 +336,12 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     },
     
     _normalizeFormat: function (format) {
-      //console.log('point 10')	
       var out = format.toLowerCase();
       out = out.split('/');
       out = out[out.length-1];
       return out;
     },
     _normalizeUrl: function (url) {
-      //console.log('point 11')	
       if (url.indexOf('https') === 0) {
         return 'http' + url.slice(5);
       } else {  
@@ -348,7 +349,6 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
       }
     },
     deleteWithConfirmation: function(dataset, options, ld, cb) {
-    	console.log('point 12')	
         var ld = ld || this._onLoad;
         var cb = cb || this._onCompleteShow; 
         this.options.helper = int_helper;
@@ -360,22 +360,12 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     },
     
     finalizeWithConfirmation: function(dataset, options, ld, cb){
-    	console.log('point 13')	
         var ld = ld || this._onLoad;
         var cb = cb || this._onCompleteShow;
-        
-        this.checkInterlinkingComplete(dataset, options, ld, cb);      
-        this.options.helper = int_helper;
-        this.options.action = 'finalize';
-        this.options.options = options;
-        this.options.cb = cb;
-        this.options.ld = ld;
-        this.confirm(this.i18n('confirm_finalize'));          
+        this.checkInterlinkingComplete(dataset, options, ld, cb);   	        		
     },
     
     applyValueAllMatchingWithConfirmation: function (dataset, options, ld, cp){
-    	console.log('Inside applyValueAllMatchingWithConfirmation');
-    	console.log(options)
     	var real_options = {
     						resource_id: options.resource_id,
     						row_id: options.row_id
@@ -405,7 +395,6 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     
     // TOCHECK: Currently not used. Is it usefull to retain it?
     updateWithConfirmation: function(dataset, options, ld, cb) {
-    	    console.log('point 14')
             var ld = ld || this._onLoad;
             var cb = cb || this._onCompleteShow;
             this.options.helper = int_helper;
@@ -417,7 +406,6 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     },
     
     checkInterlinkingComplete: function(dataset, options, ld, cb){
-    	console.log(options)
     	var records = dataset.records;
         int_helper['check_interlink_complete'](options, function (){}, this._onCompleteCheckInterlinkingComplete(options, ld, cb));
     },
@@ -508,11 +496,11 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         }, 
     _onCompleteCheckInterlinkingComplete (options, ld, cb){
         	var self = this;
-        	console.log('Inside _onCompleteCheckInterlinkingComplete')
         	return function (result){
 	        	if (result.responseJSON.result === false){
-	        		console.log('false!')
-	        		var text = self.i18n('notCompleteInterlinkNotePartA') + options.column_name + self.i18n('notCompleteInterlinkNotePartB'); 
+	        		var text = self.i18n('notCompleteInterlinkNotePartA') + 
+	        					interlinking_utility.int_state['interlinking_temp_column'] + 
+	        					self.i18n('notCompleteInterlinkNotePartB'); 
 	        		self.sandbox.body.append(self.createNotificationModal(text));
 	        		self.modal.modal('show');
 	        	    // Center the modal in the middle of the screen.
@@ -521,15 +509,12 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
 	        	        'top': '50%'
 	        	      });
 	        	}else{
-	        		/*
-	        		console.log('true!')
-        		 	self.options.helper = int_helper;
-        			self.options.action = 'finalize';
-        			self.options.options = options;
-        			self.options.cb = cb;
-        			self.options.ld = ld;
-        			self.confirm(self.i18n('confirm_finalize'));
-        			*/
+	        		self.options.helper = int_helper;
+	        		self.options.action = 'finalize';
+	        		self.options.options = options;
+	        		self.options.cb = cb;
+	                self.options.ld = ld;
+	                self.confirm(self.i18n('confirm_finalize')); 
 	        	}
 	        }
         }
