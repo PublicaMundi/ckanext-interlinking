@@ -12,10 +12,9 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         heading_confirm: _("Please Confirm Action"),
         heading_notify: _("Please Note"),
         datastore_disabled: _("Datastore is disabled. Please enable datastore and try again in order to proceed with resource interlinking"),
-        confirm_delete: _("Are you sure you want to restore this column to its status before interlinking take place?"),
-        confirm_update: _("Are you sure you want to update existing column interlinking?"),
+        confirm_delete: _("Are you sure you want to abort interlinking for this resource?"),
         confirm_update: _("Are you sure you want to restart interlinking on this column?"),
-        confirm_finalize: _("Finalizing the interlinking process for a column means that its contents will be update accordingly. Are you sure you want to finalize interlinking for this column?"),
+        confirm_finalize: _("Finalizing the interlinking process means that a new interlinked version of the original resource will be created. Are you sure you want to finalize interlinking for this column?"),
         confirm_applyToAll_partA: _("Are you sure you wish to set the value for field \""),
         confirm_applyToAll_partB: _("\" equal to \""),
         confirm_applyToAll_partC: _("\" for all rows where field \""),
@@ -31,6 +30,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
         applyAllMatchingTerms: _("Use selected value for all matching cells"),
         notCompleteInterlinkNotePartA: _("Interlinking process for this resource cannot be yet finalized. Field '"),
         notCompleteInterlinkNotePartB: _("' has some remaining blank cells."),
+        notStartedInterlink: _("Interlinking for this resource has not yet started and thus it cannot be finalized."),
         ok: _("Ok"),
         previewNotAvailableForDataType: _("Preview not available for data type: ")
       },
@@ -497,7 +497,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     _onCompleteCheckInterlinkingComplete (options, ld, cb){
         	var self = this;
         	return function (result){
-	        	if (result.responseJSON.result === false){
+	        	if (result.responseJSON.result === -1){
 	        		var text = self.i18n('notCompleteInterlinkNotePartA') + 
 	        					interlinking_utility.int_state['interlinking_temp_column'] + 
 	        					self.i18n('notCompleteInterlinkNotePartB'); 
@@ -508,7 +508,16 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
 	        	        'margin-top': self.modal.height() * -0.5,
 	        	        'top': '50%'
 	        	      });
-	        	}else{
+	        	}else if (result.responseJSON.result === -2){
+				        		var text = self.i18n('notStartedInterlink'); 
+					self.sandbox.body.append(self.createNotificationModal(text));
+					self.modal.modal('show');
+				    // Center the modal in the middle of the screen.
+					self.modal.css({
+				        'margin-top': self.modal.height() * -0.5,
+				        'top': '50%'
+				      });
+				}else if (result.responseJSON.result === 0){
 	        		self.options.helper = int_helper;
 	        		self.options.action = 'finalize';
 	        		self.options.options = options;

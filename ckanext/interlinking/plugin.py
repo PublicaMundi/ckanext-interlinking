@@ -56,12 +56,11 @@ class ReclinePreviewInterlinking(p.SingletonPlugin):
                 'interlinking_resource_update': action.interlinking_resource_update,
                 'interlinking_resource_delete': action.interlinking_resource_delete,
                 'interlinking_resource_finalize': action.interlinking_resource_finalize,
+                'interlinking_resource_search': action.interlinking_resource_search,
                 'interlinking_get_reference_resources': action.interlinking_get_reference_resources,
                 'interlinking_resource_download': action.interlinking_resource_download,
                 'interlinking_check_interlink_complete': action.interlinking_check_interlink_complete,
                 'interlinking_apply_to_all': action.interlinking_apply_to_all,
-                #TODO: remove it
-                'interlinking_temp': action.interlinking_temp,
                 'interlinking_star_search': action.interlinking_star_search,
                 }
     

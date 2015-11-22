@@ -1,6 +1,5 @@
 var CKAN = {};
 
-
 var isNodeModule = (typeof module !== 'undefined' && module != null && typeof require !== 'undefined');
 
 if (isNodeModule) {
@@ -51,7 +50,6 @@ if (isNodeModule) {
      var interlinkedSortQueryPart;
      // This variable determines if the original resource enforces order (true) or 
      //   the temp_interlinking one (false) 
-     var originalSortMaster;
      
      if(window.dataExplorer !== undefined){
     	 var fields = window.dataExplorer.model.fields;
@@ -61,14 +59,14 @@ if (isNodeModule) {
     	 
          interlinkedSortQueryPart = '_id ' + sort_direction;
          originalQuery = actualQuery;
-		 originalQuery.sort = '_id ' + sort_direction;
+
      }
-    this.action('datastore_search', actualQuery, function(err, original_res_results) {
+    this.action('interlinking_resource_search', actualQuery, function(err, results) {
       if (err) {
         cb(err);
         return;
       }
-      
+      /*
       var interlinkingQuery = {
           limit: actualQuery.limit,
           offset: actualQuery.offset,
@@ -77,12 +75,17 @@ if (isNodeModule) {
           resource_id: queryObj.interlinking_resource,
           interlinked_column: queryObj.interlinked_column,
       }
-	  
+	  */
+      interlinking_utility.int_state['fields_status'] = results.result.fields_status;
+      interlinking_utility.int_state['reference_fields'] = interlinking_utility.int_state['reference_fields'] || []
       int_helper.show_resource(queryObj.interlinking_resource, function(response){
 	      if (response){
 	          var columns= {};
 	          try{
 	              columns = JSON.parse(response.responseJSON.result.interlinking_columns_status);
+	              if (typeof response.responseJSON.result.reference_fields != 'undefined'){
+	            	  interlinking_utility.int_state['reference_fields'] = _.pluck(JSON.parse(response.responseJSON.result.reference_fields),'id');
+	              }
 	              for (var key in columns){
 	              	if (columns[key] !== 'not-interlinked'){
 	              		interlinking_utility.int_state['reference_resource'] = interlinking_utility.int_state['reference_resource'] || columns[key];
@@ -90,185 +93,64 @@ if (isNodeModule) {
 	              		break;
 	              	}
 	              }
-	          }
-	          catch(err) {
+	              // map ckan types to our usual types ...
+	              var fields = _.map(results.result.fields, function(field) {
+	                field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
+	                return field;
+	              });
+	              
+	              var new_fields = [];
+	              var records = [];
+	              fields.forEach(function(fld, idx1){
+	            	  var new_fld = {'id': fld.id, 'type': fld.type}
+	            	  
+	            	  if (interlinking_utility.int_state['reference_fields'].indexOf(fld.id) > -1){
+	            		  interlinked_column_found = true;
+	            		  switch(interlinking_utility.int_state['reference_fields'].indexOf(fld.id)){
+	            		  	  case 0:
+	            		  		  // Flag declaring that it hosts interlinking results
+	            		  		  new_fld['hostsInterlinkingResult'] = true;
+	            		  		  interlinking_utility.int_state['interlinking_temp_column'] = fld.id;
+	            		  		  break;
+	            		  	  case 1:
+	            		  		  new_fld['label'] = 'score';
+	            		  		  new_fld['hostsInterlinkingScore'] = true;
+	            		  		  new_fld['type'] = 'text';
+	            		  		  new_fld['format'] = 'float';
+	            		  		  break;
+	            		  	  case 2:
+	            		  		  new_fld['type'] = 'boolean';
+	            		  		  new_fld['label'] = 'edit';
+	            		  		  new_fld['hostsInterlinkinCheckedFlag'] = true;
+	            		  		  new_fld['format'] = 'boolean';
+	            		  		  break;
+	            		  		  break;
+	            		  	  case 3:
+	                              new_fld['type'] = 'text';
+	                              new_fld['hostsAllInterlinkingResults'] = true;
+	            		  	  default:
+	            		  		  new_fld['type'] = 'text';
+	            		  	  	  new_fld['hostsInterlinkingAuxField'] = true;
+	            		  		  break;
+	            		  }
+	            	  }
+	            	  
+	            	  new_fields.push(new_fld);
+	              });
+	              
+	              var out = {
+	        		            total: results.result.total,
+	        		            fields: new_fields,
+	        		            hits: results.result.records
+	        	            };
+	        	     
+	        	   cb(null, out);
+	              
+	          }catch(err) {
+	        	   console.error(err)
 	          }
 	      }
 	  });
-  
-      self.action('datastore_search', interlinkingQuery, function(err2, interlink_res_results) {
-          if (err2) {
-            cb(err2);
-            return;
-          }
-     
-	      // map ckan types to our usual types ...
-	      var original_res_fields = _.map(original_res_results.result.fields, function(field) {
-	        field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
-	        return field;
-	      });
-
-	      var interlink_res_fields = _.map(interlink_res_results.result.fields, function(field) {
-	        field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
-	        return field;
-	      });
-	      	      	
-	        var records = [];
-	        var new_fields = [];
-	        if (typeof interlink_res_results != 'undefined'){
-	        	var fields_temp = interlink_res_fields.slice(0);
-	        }
-	        var int_field_ids = [];
-
-	        interlinking_utility.int_state['interlinked_column'] = interlinking_utility.int_state['interlinked_column'] || interlinkingQuery.interlinked_column; 
-	        var interlinked_column_name = interlinking_utility.int_state['interlinked_column'];
-	        
-	        // For each original field, add it to final fields, and if you find an 
-	        // interlinking field with the same name (but not '_id'), add it after the original one
-	        interlinking_utility.int_state['backend_columns'] = {};
-	        original_res_fields.forEach(function(fld, idx1){
-	        	var match_found = false;
-	        	var current_field;
-	        	if (typeof interlinked_column_name != 'undefined' && 
-	        				fld.id == interlinked_column_name && 
-	        				interlink_res_results.result.records.length > 0 &&
-	        				fld.id !== '_id'){
-	        		new_fields.push(fld);
-	        		// This is the field which the users sees. It contains the best interlinking result,
-	                //   or the user's choice if he has chosen a different result 
-	        		current_field = fields_temp[1];
-	        		interlinking_utility.int_state['interlinking_temp_column'] = current_field.id;
-	        		var new_fld_id = interlinked_column_name + '_int'
-	        		new_fld = {
-	                            'id': new_fld_id,
-	                            'label': current_field.id,
-	                            'type': 'text',
-	                            // Flag declaring that it hosts interlinking results
-	                            'hostsInterlinkingResult': true,
-	                            'dst_column_name': current_field.id
-	                        };
-	        		new_fields.push(new_fld);
-	        		int_field_ids.push(current_field.id);
-	        		
-	        		// This field contains the score of the previous one (best result or user's choice).
-	        		current_field = fields_temp[2];
-	        		new_fld_id = interlinked_column_name + '_int_score'
-                    new_fld = {
-                            'id': new_fld_id,
-                    		'label': 'score',
-                            'type': 'text',
-                            'format': 'float',
-                            'hostsInterlinkingScore': true
-                            // TODO: create a custom renderer	
-                        };
-                    new_fields.push(new_fld);
-                    int_field_ids.push(current_field.id);
-                                      
-	        		
-                    // This field contains all results along with their scores.
-                    current_field = fields_temp[3];
-                    new_fld_id = interlinked_column_name + '_int_results'
-                    new_fld = {
-                            'id': new_fld_id,
-                            'type': 'text',
-                            'hostsAllInterlinkingResults': true
-                        };
-                    new_fields.push(new_fld);
-                    int_field_ids.push(current_field.id);
-                    
-                    // This field is a boolean flag indicating if the user has checked (parcticaly clicked on) 
-                    //  an interlinking result by hand 
-                    current_field = fields_temp[4];
-                    new_fld_id = interlinked_column_name + '_int_checked'
-                    new_fld = {
-                            'id': new_fld_id,
-                            'type': 'boolean',
-                            'label': 'edit',
-                            'hostsInterlinkinCheckedFlag': true,
-                            'format': 'boolean',
-                        };
-                    new_fields.push(new_fld);
-                    int_field_ids.push(current_field.id);
-                    
-	        		
-                    // Adding the rest of the reference fields
-                    interlinking_utility.int_state['auxiliary_columns'] = [];
-	        		fields_temp.forEach(function(fld2, idx2){
-	        			if (idx2 >= 5 ){
-	        				current_field = fld2;
-	        				new_fld_id = interlinked_column_name + '_int_aux_' + fld2.id.toLowerCase();
-	        				new_fld = {
-	                                'id': new_fld_id,
-	                                'label': fld2.id,
-	                                'type': 'text',
-	                                'hostsInterlinkingAuxField': true
-	                            };
-	        				new_fields.push(new_fld);
-	        				int_field_ids.push(current_field.id);
-	        			}
-		            });
-	        	}
-	            if(!match_found){
-	            	new_fields.push(fld);
-	            }
-
-	        });
-
-	        // For each original record, get the respective value of the interlinking records
-	        original_res_results.result.records.forEach(function(rc, idx){
-	        	if (typeof interlinked_column_name != 'undefined' && interlink_res_results.result.records.length > 0){
-	        		
-		        	// main interlinking field
-		        	var col_id = interlinked_column_name + '_int';
-		        	var val_int = interlink_res_results.result.records[idx][int_field_ids[0]];
-		        	rc[col_id] = val_int;
-		        	
-	        		// score interlinking field
-		        	col_id = interlinked_column_name + '_int_score';
-		        	val_int = interlink_res_results.result.records[idx][int_field_ids[1]];
-		        	rc[col_id] = val_int;
-		        	
-	        		// checked flag field
-		        	col_id = interlinked_column_name + '_int_checked';
-		        	val_int = interlink_res_results.result.records[idx][int_field_ids[2]];
-		        	rc[col_id] = val_int;
-		        	
-	        		// interlinking results field
-		        	col_id = interlinked_column_name + '_int_results';
-		        	val_int = interlink_res_results.result.records[idx][int_field_ids[3]];
-		        	rc[col_id] = val_int;
-	
-	        		
-		        	// auxiliary fields from the reference dataset
-		        	interlink_res_fields.forEach(function(fld2, idx2) {
-		        		if (idx2 >= 5){
-		        			col_id = interlinked_column_name + '_int_aux_' + int_field_ids[idx2-1].toLowerCase();
-		    	        	val_int = interlink_res_results.result.records[idx][int_field_ids[idx2-1]];
-		        			rc[col_id] = val_int;
-		        		}
-	                });
-	        	}
-                records.push(rc);
-	        });
-	        
-	        var comfunc = my._compareObjectsCreator(sort_field,sort_direction)
-	        records.sort(comfunc)
-	        
-	        if (originalSortMaster == true){
-	        	;//records.sort(compareObjectsCreator(sort_field,sort_direction))
-	        }else{
-	        	;
-	        }
-	        
-	        
-	        var out = {
-	            total: original_res_results.result.total,
-	            fields: new_fields,
-	            hits: records
-	            };
-	        
-	      cb(null, out);
-    });
 
    });
   };
@@ -285,40 +167,48 @@ if (isNodeModule) {
     
 	
     // Getting fields info
-    var datastore_field_names = {}
+    var datastore_field_names = []
     var interlinked_column;
     var interlinking_column;
     var score_column;
     var results_column;
+    var checked_column;
     var original_fields = []
-    for (var key in updates[0]){
-    	if (key.indexOf('_int') > 0 && key+'_score' in updates[0] && 
-    			key+'_results' in updates[0] && key+ '_checked' in updates[0]){
-    		interlinking_column = key
-    		interlinked_column = interlinking_utility.int_state['interlinked_column'];
-    		score_column = key + '_score';
-    		results_column = key + '_results';
-    		checked_column = key + '_checked';
-    		original_fields = JSON.parse(updates[0][key + '_results'])['fields']
-    		break;
+    var auxiliary_fields = []
+        
+    for (var key in interlinking_utility.int_state['fields_status']){
+    	if(interlinking_utility.int_state['fields_status'][key] == 'interlinking_result' ||
+    			interlinking_utility.int_state['fields_status'][key] == 'interlinking_score' ||
+    			interlinking_utility.int_state['fields_status'][key] == 'interlinking_check_flag' ||
+    			interlinking_utility.int_state['fields_status'][key] == 'interlinking_all_results' ||
+    			interlinking_utility.int_state['fields_status'][key] == 'reference_auxiliary'){
+    		datastore_field_names.push(key)
+    	}
+    	
+    	
+    	if (interlinking_utility.int_state['fields_status'][key] == 'original'){
+    		original_fields.push(key);
+    	}else if (interlinking_utility.int_state['fields_status'][key] == 'orignal_interlinked'){
+    		interlinked_column = key;
+    	}else if (interlinking_utility.int_state['fields_status'][key] == 'interlinking_result'){
+    		interlinking_column = key;
+    	}else if (interlinking_utility.int_state['fields_status'][key] == 'interlinking_score'){
+    		score_column = key;
+    	}else if (interlinking_utility.int_state['fields_status'][key] == 'interlinking_check_flag'){
+    		checked_column = key;
+    	}else if (interlinking_utility.int_state['fields_status'][key] == 'interlinking_all_results'){
+    		results_column = key;
+    	}else if (interlinking_utility.int_state['fields_status'][key] == 'reference_auxiliary'){
+    		auxiliary_fields.push(key);
     	}
     }
-    if(updates.length > 0){
-	    datastore_field_names[interlinking_column] = original_fields[0];
-	    datastore_field_names[score_column] = 'int__score';
-	    datastore_field_names[results_column] = 'int__all_results';
-	    datastore_field_names[checked_column] = 'int__checked_flag';
-	    for (var i=2; i< original_fields.length; i++){
-	    	datastore_field_names[interlinked_column + '_int_aux_' + original_fields[i].toLowerCase()] = original_fields[i];
-	    }
-    }
-     
+
     updates.forEach(function(upd, idx){  	
     	var it = {};
     	it['_id'] = upd['_id'];
     	
     	for (var dfn in datastore_field_names){
-    		it[datastore_field_names[dfn]] = upd[dfn];
+    		it[datastore_field_names[dfn]] = upd[datastore_field_names[dfn]];
     	}
     	new_updates.push(it);
     });
@@ -344,6 +234,7 @@ if (isNodeModule) {
       };
       cb(null, out);
     });
+    
     
   };
 
@@ -483,25 +374,6 @@ if (isNodeModule) {
     }
     return actualQuery;
   };
-  
-  // This function can be used to compare two objects (a,b) based on one of their properties.
-  // direction takes values 'asc' and 'desc' with the former being the default one.
-  my._compareObjectsCreator = function foo(property, direction){
- 	  return function (a, b){
- 		  if (a[property] < b[property])
-  	   		    result = -1;
-  	   	  else if (a[property] > b[property])
-  	   			result = 1;
-  	   	  else
-  	   		  return 0;
-  	   	  
-  	   	  if (direction == 'desc'){
-  	   		  return -result
-  	   	  }else{
-  	   		  return result
-  	   	  }
- 	  }
-  } 
 
   // Parse a normal CKAN resource URL and return API endpoint etc
   //

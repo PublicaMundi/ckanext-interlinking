@@ -48,7 +48,6 @@ def interlinking_resource_create(context, data_dict):
     data_dict, errors = _validate(data_dict, schema, context)
     if errors:
         raise p.toolkit.ValidationError(errors)
-
     res = p.toolkit.get_action('resource_show')(context, {'id': data_dict.get('resource_id')})
     ds = p.toolkit.get_action('datastore_search')(context, {'resource_id': data_dict.get('resource_id')})    
     on_interlinking_process = res.get('on_interlinking_process')
@@ -74,7 +73,6 @@ def interlinking_resource_create(context, data_dict):
         columns_status.update({field.get('id'):'not-interlinked'})
 
     columns_status = json.dumps(columns_status)
-
     new_res = p.toolkit.get_action('resource_create')(context,
             {
                 'package_id': data_dict.get('package_id'),
@@ -91,7 +89,6 @@ def interlinking_resource_create(context, data_dict):
                 'state': 'active',  
                 'interlinking_columns_status':columns_status
             })
-    
     temp_interlinking_resource = new_res.get('id')    
     
     # Update original resource metadata
@@ -189,7 +186,8 @@ def interlinking_resource_delete(context, data_dict):
     upd_original_res = p.toolkit.get_action('resource_show')(context, original_res)
     upd_original_res['on_interlinking_process'] = False
     del upd_original_res['temp_interlinking_resource']
-    del upd_original_res['interlinked_column']
+    if upd_original_res.get('interlinked_column'):
+        del upd_original_res['interlinked_column']
     upd_original_res = p.toolkit.get_action('resource_update')(context, upd_original_res)
     
     return p.toolkit.get_action('resource_delete')(context, {'id': data_dict.get('resource_id')})
@@ -198,17 +196,21 @@ def interlinking_resource_delete(context, data_dict):
 def interlinking_resource_finalize(context, data_dict):
     '''Finalizes the interlinked resource, i.e. a new one is created where the original interlinked column 
     is being replaced by the new interlinked one.
-    
     '''
     p.toolkit.check_access('interlinking_resource_finalize', context, data_dict)
 
     schema = context.get('schema', dsschema.interlinking_resource_finalize_schema())
-    int_resdata_dict, errors = _validate(data_dict, schema, context)
+    data_dict, errors = _validate(data_dict, schema, context)
     if errors:
         raise p.toolkit.ValidationError(errors)
 
     interlinked_resource_id = data_dict.get('resource_id')
     int_res = p.toolkit.get_action('resource_show')(context, {'id': interlinked_resource_id})
+    # If the original resource is already interlinked
+    if not int_res.get('reference_fields'):
+        raise p.toolkit.ValidationError('Resource "{0}" is not been interlinked yet. ' \
+                        'Thus it cannot be finalized'.format(int_res.get('interlinking_parent_id')))
+    
     interlinking_column = json.loads(int_res.get('reference_fields'))[0]['id']
     original_resource_id = int_res.get('interlinking_parent_id')
     
@@ -222,7 +224,6 @@ def interlinking_resource_finalize(context, data_dict):
     #if not on_interlinking_process or on_interlinking_process == False:
     #    raise p.toolkit.ValidationError('Resource "{0}" is not currently being interlinked resource'.format(res.get('id')))
     
-    #TODO get a better name for reference
     interlinking_columns_status = json.loads(int_res.get('interlinking_columns_status'))
     for i in interlinking_columns_status:
         if interlinking_columns_status[i] != 'not-interlinked':
@@ -331,7 +332,57 @@ def interlinking_resource_finalize(context, data_dict):
     # is marked as not being currently interlinked.   
     p.toolkit.get_action('interlinking_resource_delete')(context, {'resource_id': interlinked_resource_id})
     return {'interlinked_res_id': new_res.get('id')}
+
+
+
+
+
+
+
+
+@logic.side_effect_free
+def interlinking_resource_search(context, data_dict):
+    '''Provides a complete interlinking resource providing fields from both the interlinked resource
+    and the interlinking temporary one. It gets as parameters the resource_id and datastore_search filters'''
     
+    schema = context.get('schema', dsschema.interlinking_resource_search_schema())
+    data_dict, errors = _validate(data_dict, schema, context)
+    if errors:
+        raise p.toolkit.ValidationError(errors)
+    
+    orig_res = p.toolkit.get_action('resource_show')(context, {'id': data_dict.get('resource_id')})
+    if not orig_res.get('on_interlinking_process'):
+        raise p.toolkit.ValidationError('Resource "{0}" is not under interlinking process'.format(orig_res.get('id')))
+    
+    int_res = p.toolkit.get_action('resource_show')(context, {'id': orig_res.get('temp_interlinking_resource')})
+    ori_ds = p.toolkit.get_action('datastore_search')(context, {'id': data_dict.get('resource_id')})
+    int_ds = p.toolkit.get_action('datastore_search')(context, {'id': orig_res.get('temp_interlinking_resource')})
+    
+    original_fields = [x['id'] for x in ori_ds.get('fields')]
+    interlinking_fields = [x['id'] for x in int_ds.get('fields')]    
+    if data_dict.get('fields'):
+        for field in _get_list(data_dict.get('fields')):
+            if not (field in original_fields or field in interlinking_fields):
+                raise p.toolkit.ValidationError(u'Requested field {0} does not exist in either resource\'s {1} '
+                                                'nor resource\'s {2} tables'.format(field, 
+                                                                                    data_dict.get('resource_id'), 
+                                                                                    int_res.get('interlinking_parent_id')))
+    interlinking_columns_status = int_res.get('interlinking_columns_status')
+    
+    data_dict.update({'original_fields': original_fields, 
+                      'interlinking_fields': interlinking_fields, 
+                      'interlinking_resource_id': int_res.get('id'), 
+                      'interlinking_columns_status': interlinking_columns_status})
+    
+    create_view_results = _create_view(context, data_dict)
+    
+    data = {'sql': create_view_results.get('sql'), 'fields_status': create_view_results.get('fields_status')}
+    ds_search_sql = p.toolkit.get_action('datastore_search_sql')(context, data)
+    params_dict = _get_params_dict(data_dict)
+    ds_search_sql.update(params_dict)
+    return ds_search_sql
+
+
 
 # This action provides all available reference resources for interlinking
 @toolkit.side_effect_free
@@ -408,7 +459,7 @@ def interlinking_resource_download(context, data_dict):
 
 
 def interlinking_star_search(context, data_dict):
-    ''' It searches lucene with a '*' wildcard. The wildcard is positioned at the end of
+    ''' It searches lucene with a '*' wildcard. The wildcard is positioned at the end of \
     the search string. 
     '''
     schema = context.get('schema', dsschema.interlinking_star_search_schema())
@@ -436,15 +487,18 @@ def interlinking_check_interlink_complete(context, data_dict):
     
     interlinked_resource_id = data_dict.get('resource_id')
     int_res = p.toolkit.get_action('resource_show')(context, {'id': interlinked_resource_id})
+    # If the original resource is already interlinked
+    if not int_res.get('reference_fields'):
+        return -2
     interlinking_column = json.loads(int_res.get('reference_fields'))[0]['id']
     filter = {interlinking_column: ''}
     ds = p.toolkit.get_action('datastore_search')(context, {'resource_id': data_dict.get('resource_id'),
                                                             'fields': interlinking_column,
                                                             'filters': filter})    
     if ds.get('total') > 0:
-        return False
+        return -1
     else:
-        return True
+        return 0
     
     
 def interlinking_apply_to_all(context, data_dict):
@@ -458,6 +512,14 @@ def interlinking_apply_to_all(context, data_dict):
     
     interlinked_resource_id = data_dict.get('resource_id')
     int_res = p.toolkit.get_action('resource_show')(context, {'id': interlinked_resource_id})
+    
+    pprint.pprint(int_res) 
+    
+    # If the original resource is already interlinked
+    if not int_res.get('reference_fields'):
+        raise p.toolkit.ValidationError('Resource "{0}" is not been interlinked yet. ' \
+                        'Thus it cannot be finalized'.format(int_res.get('interlinking_parent_id')))
+    
     orig_ds = p.toolkit.get_action('datastore_search')(context, {'resource_id': int_res.get('interlinking_parent_id')})
     row_id = data_dict.get('row_id')
     original_column_name = [k for (k, v) in json.loads(int_res.get('interlinking_columns_status')).iteritems() if v != 'not-interlinked'][0]
@@ -531,14 +593,6 @@ def interlinking_apply_to_all(context, data_dict):
             })
     return
                     
-        
-@toolkit.side_effect_free
-#TODO: remove it
-def interlinking_temp(context, data_dict):
-    #suggestions = lucene_access.search('Νέας Ιωνίας', 'kallikratis')
-    suggestions = lucene_access.getFields('kallikratis', True)
-    if isinstance(suggestions, list):
-        print suggestions
 
 
 def _initialize_columns(context, col_name, ds, total, reference_resource):
@@ -680,3 +734,170 @@ def _interlink_column(context, res, col_name, original_ds, new_ds, reference, re
           
         offset=offset+STEP
     return new_ds
+
+
+
+
+def _get_params_dict(data_dict):
+    params_dict = {}
+    for param in ['limit', 'offset', 'fields', 'sort', 'filters', 'q']:
+        if param in data_dict:
+            params_dict[param] = data_dict.get(param)
+    return params_dict
+
+
+def _create_view(context, data_dict):
+    '''Creates a view combination fields from the interlinked resource 
+    and the temporary interlinking one.'''
+    
+    orig_resource = data_dict.get('resource_id')
+    inter_resource = data_dict.get('interlinking_resource_id')
+
+    original_fields = data_dict.get('original_fields',[])
+    interlinking_fields = data_dict.get('interlinking_fields',[])
+    selected_fields = data_dict.get('fields')#, original_fields)
+    if not selected_fields is None:
+        data_dict.update({'fields_selected': True})
+    else:
+        selected_fields = original_fields
+    field_ids = _get_fields(selected_fields, data_dict)
+    field_tupples = [(f.split('.')[1].strip('"'), f.split('.')[0].strip('"')) for f in field_ids]
+    fields_status = {}
+    interlinking_field_count = 0
+    original_interlinked = None
+    #pprint.pprint(field_tupples)
+    for field_tuple in field_tupples:
+        if field_tuple[1] == orig_resource:
+            fields_status[field_tuple[0]] = 'original'
+            original_interlinked = field_tuple[0]
+        elif field_tuple[1] == inter_resource:
+            if interlinking_field_count == 0:
+                fields_status[field_tuple[0]] = 'interlinking_result'
+                fields_status[original_interlinked] = 'orignal_interlinked'
+            elif interlinking_field_count == 1:
+                fields_status[field_tuple[0]] = 'interlinking_score'
+            elif interlinking_field_count == 2:
+                fields_status[field_tuple[0]] = 'interlinking_check_flag'
+            elif interlinking_field_count == 3:
+                fields_status[field_tuple[0]] = 'interlinking_all_results'
+            else:
+                fields_status[field_tuple[0]] = 'reference_auxiliary'
+            interlinking_field_count += 1
+    
+    sql_fields = u", ".join(field_ids)
+    limit = data_dict.get('limit', 100)
+    offset = data_dict.get('offset', 0)
+    
+    combined_fields = original_fields + list(set(interlinking_fields) - set (original_fields))
+    sort = _sort(context, data_dict, combined_fields)
+    print '---------------SORT-----------------'
+    pprint.pprint(sort)
+    print '---------------SORT-----------------'
+    
+    sql_string = u'''SELECT {fields}, \
+                    COUNT (*) OVER () AS "_full_count" \
+                    FROM "{orig_resource}" \
+                    LEFT JOIN "{inter_resource}" \
+                    ON "{orig_resource}"._id = "{inter_resource}"._id \
+                    {sort} \
+                    OFFSET {offset} \
+                    LIMIT {limit};'''.format(fields = sql_fields,
+                                             orig_resource = orig_resource,
+                                             inter_resource = inter_resource,
+                                             sort = sort,
+                                             offset = offset,
+                                             limit = limit)
+                    
+     
+    return {'sql': sql_string.encode('utf-8'), 'fields_status': fields_status}
+    
+
+def _get_fields(fields, data_dict):
+    #orig_field_ids = data_dict.get('fields', [])
+    inter_field_ids = data_dict.get('interlinking_fields', [])
+    orig_table = data_dict.get('resource_id')
+    inter_table = data_dict.get('interlinking_resource_id')
+
+    all_field_ids = _get_list(fields)
+    interlinking_columns_status = json.loads(data_dict.get('interlinking_columns_status'))
+    field_ids = []
+    
+    # If fields are selected by the user
+    if data_dict.get('fields_selected'):
+        for field in all_field_ids:
+            if field in inter_field_ids and not field == '_id':
+                table = inter_table
+            else:
+                table = orig_table
+            # if column translation available rename field using alias
+            field_ids.append(u'"{0}"."{1}"'.format(table, field))
+    else:
+        for field in all_field_ids:
+            field_ids.append(u'"{0}"."{1}"'.format(orig_table, field))
+            if not interlinking_columns_status.get(field) == 'not-interlinked' and not interlinking_columns_status.get(field) == '':
+                for int_field in inter_field_ids:
+                    if int_field != '_id':
+                        field_ids.append(u'"{0}"."{1}"'.format(inter_table, int_field))
+    return field_ids
+
+
+def _get_list(input, strip=True):
+    '''Transforms a string or list to a list'''
+    if input is None:
+        return
+    if input == '':
+        return []
+
+    l = converters.aslist(input, ',', True)
+    if strip:
+        return [_strip(x) for x in l]
+    else:
+        return l
+    
+
+def _sort(context, data_dict, field_ids):
+    sort = data_dict.get('sort')
+    if not sort:
+        if data_dict.get('q'):
+            return u'ORDER BY rank'
+        else:
+            return u''
+
+    resource_id = data_dict.get('resource_id')
+    clauses = _get_list(sort, False)
+
+    clause_parsed = []
+    for clause in clauses:
+        clause = clause.encode('utf-8')
+        clause_parts = shlex.split(clause)
+        if len(clause_parts) == 1:
+            field, sort = clause_parts[0], 'asc'
+        elif len(clause_parts) == 2:
+            field, sort = clause_parts
+        else:
+            raise ValidationError({
+                'sort': ['not valid syntax for sort clause']
+            })
+        field, sort = unicode(field, 'utf-8'), unicode(sort, 'utf-8')
+
+        if field not in field_ids:
+            raise ValidationError({
+                'sort': [u'field "{0}" not in table with fields {1}'.format(
+                    field, field_ids)]
+            })
+        if sort.lower() not in ('asc', 'desc'):
+            raise ValidationError({
+                'sort': ['sorting can only be asc or desc']
+            })
+        clause_parsed.append(u'"{0}" {1}'.format(
+            field, sort)
+        )
+
+    if clause_parsed:
+        return "order by " + ", ".join(clause_parsed)
+    
+    
+def _strip(input):
+    if isinstance(input, basestring) and len(input) and input[0] == input[-1]:
+        return input.strip().strip('"')
+    return input

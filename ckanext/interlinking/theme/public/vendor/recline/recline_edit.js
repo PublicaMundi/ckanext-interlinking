@@ -1594,8 +1594,7 @@ my.SlickGrid = Backbone.View.extend({
     
     
     for(var i=0; i < this.model.fields.length; i++){  
-    	if(//this.model.fields.at(i).get("isInterlinked") === true || 
-    			this.model.fields.at(i).get("hostsAllInterlinkingResults") === true)
+    	if(this.model.fields.at(i).get("hostsAllInterlinkingResults") === true)
     		hiddenColumns.push(this.model.fields.at(i).id);
     }
     hiddenColumns.concat(self.state.get('hiddenColumns'));
@@ -1850,19 +1849,18 @@ my.SlickGrid = Backbone.View.extend({
     	var fields = model.fields;
         var fieldID = grid.getColumns()[selctedCell.cell].field;
         selectedField = model.fields.get(fieldID); 
-        
+                
     	if(selectedField.get("hostsInterlinkingResult")){
     		// A context menu is loaded containing other alternatives    		
     		var originalFieldId = fields.at(fields.indexOf(selectedField) - 1).id;
     		var scoreFieldId = fields.at(fields.indexOf(selectedField) + 1).id;
-    		var resultsFieldId = fields.at(fields.indexOf(selectedField) + 2).id;
-    		var checkFieldId = fields.at(fields.indexOf(selectedField) + 3).id;
+    		var checkFieldId = fields.at(fields.indexOf(selectedField) + 2).id;
+    		var resultsFieldId = fields.at(fields.indexOf(selectedField) + 3).id;
     		
             var ul = $("#termsMenu");
             ul.empty();
-            var originalValue = model.records.at(selctedCell.row).get(originalFieldId)            
+            var originalValue = model.records.at(selctedCell.row).get(originalFieldId)   
             var otherResults = JSON.parse(model.records.at(selctedCell.row).get(resultsFieldId)).records;
-            
 
             var otherFields = JSON.parse(model.records.at(selctedCell.row).get(resultsFieldId)).fields;
             
@@ -1881,12 +1879,12 @@ my.SlickGrid = Backbone.View.extend({
             	for(var j=2; j< otherFields.length; j++){
             		ul_text += ' ' + otherFields[j] + '="' + otherResults[i][otherFields[j]] + '"';
             	}
-            	
+            	            	
             	if(otherResults[i][otherFields[1]] == Number(otherResults[i][otherFields[1]]))
             		var score_part = parseFloat(otherResults[i][otherFields[1]]).toFixed(4)
             	else
             		var score_part = otherResults[i][otherFields[1]]
-            	ul_text += '">' + otherResults[i][otherFields[0]] + "   (score: "+ score_part +")" + "</li>"
+            	ul_text += '>' + otherResults[i][otherFields[0]] + "   (score: "+ score_part +")" + "</li>"
             	ul.append(ul_text);
             }
             if (model.records.at(selctedCell.row).get(checkFieldId))
@@ -2074,16 +2072,14 @@ my.SlickGrid = Backbone.View.extend({
 		var intFieldId = selectedField.id;
 		var originalFieldId = fields.at(fields.indexOf(selectedField) - 1).id;
 		var scoreFieldId = fields.at(fields.indexOf(selectedField) + 1).id;
-		var resultsFieldId = fields.at(fields.indexOf(selectedField) + 2).id;
-		var checkedFieldId = fields.at(fields.indexOf(selectedField) + 3).id;
+		var checkedFieldId = fields.at(fields.indexOf(selectedField) + 2).id;
+		var resultsFieldId = fields.at(fields.indexOf(selectedField) + 3).id;
 		
 		//Get all interlinking auxiliary fields
 		var int_aux_fields = []
-		var int_aux_field_sufixes = []
 		for (var i=0; i < fields.length; i++){
-			if(fields.at(i).id.substring(0, originalFieldId.length + '_int_aux_'.length) === originalFieldId + '_int_aux_'){
+			if (interlinking_utility.int_state['fields_status'][fields.at(i).id] == 'reference_auxiliary'){
 				int_aux_fields.push(fields.at(i).id);
-				int_aux_field_sufixes.push(fields.at(i).id.substring(originalFieldId.length + '_int_aux_'.length, fields.at(i).id.length))
 			}
 		}
 		
@@ -2091,19 +2087,19 @@ my.SlickGrid = Backbone.View.extend({
 		var selectedValue = model.records.at(selctedCell.row).get(intFieldId)
         var otherResults = JSON.parse(model.records.at(selctedCell.row).get(resultsFieldId))
         var row_id = model.records.at(selctedCell.row).get(idField)
-				
+
     	if (e.target.id == "termOption"){
-    		record.set(intFieldId, $(e.target).attr('term'));
-    		record.set(scoreFieldId, $(e.target).attr('score'));
+    		record.set(intFieldId, $(e.target).attr('term'))
+    		record.set(scoreFieldId, $(e.target).attr('score'))
     		for(var i =0; i< int_aux_fields.length; i++){
-    			record.set(int_aux_fields[i],$(e.target).attr(int_aux_field_sufixes[i]));
+    			record.set(int_aux_fields[i],$(e.target).attr(int_aux_fields[i]));
     		}
-    		
     		record.set(checkedFieldId, true);
-        	grid.getData().updateItem(record,row);
-        	grid.updateRow(row);
+    		grid.getData().updateItem(record,row);
+    		grid.updateRow(row);
     		grid.render();
     		dataExplorer.model.save();
+
     	} else if(e.target.id =="applyAllOption"){
     		model.trigger('applyToAll', row_id, originalValue, selectedValue);
     	}
@@ -2129,13 +2125,15 @@ my.SlickGrid = Backbone.View.extend({
 		var intFieldId = selectedField.id;
 		var originalFieldId = fields.at(fields.indexOf(selectedField) - 1).id;
 		var scoreFieldId = fields.at(fields.indexOf(selectedField) + 1).id;
-		var resultsFieldId = fields.at(fields.indexOf(selectedField) + 2).id;
-		var checkedFieldId = fields.at(fields.indexOf(selectedField) + 3).id;
+		var checkedFieldId = fields.at(fields.indexOf(selectedField) + 2).id;
+		var resultsFieldId = fields.at(fields.indexOf(selectedField) + 3).id;
 		
-		var auxFieldIds = [];
-	
+		var auxFieldIds = []
+		for (var f in interlinking_utility.int_state['fields_status']){
+			if (interlinking_utility.int_state['fields_status'][f] == 'reference_auxiliary')
+				auxFieldIds.push(f);
+		}
 		var interlinkingResults = JSON.parse(record.get(resultsFieldId));
-		
 		var resultsFieldRecord = {};
 		
 		$.each(e.target.attributes, function(i, attrib){
@@ -2152,8 +2150,14 @@ my.SlickGrid = Backbone.View.extend({
 		    	 resultsFieldRecord['scoreField'] = value;
 		     }
 		     else if (name !== 'id'){
-		    	 record.set(originalFieldId + '_int_aux_' + name, value);
-		    	 resultsFieldRecord[name] = value;
+		    	 for (var f in auxFieldIds){
+		    		 if (auxFieldIds[f].toLowerCase() == name){
+		    			 record.set(auxFieldIds[f], value);
+		    			 resultsFieldRecord[auxFieldIds[f]] = value;
+		    			 break;
+		    		 }
+		    	 }
+
 		     }
 		  });
 		if (_.pluck(interlinkingResults.records, interlinkingResults.fields[0]).indexOf(resultsFieldRecord[interlinkingResults.fields[0]])){

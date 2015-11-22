@@ -151,3 +151,18 @@ def interlinking_apply_to_all_schema():
     }
     return schema
 
+def interlinking_resource_search_schema():
+    schema = {
+        'resource_id': [not_missing, not_empty, resource_id_exists, unicode],
+        'q': [ignore_missing, unicode],
+        'plain': [ignore_missing, boolean_validator],
+        'filters': [ignore_missing, json_validator],
+        'limit': [ignore_missing, int_validator],
+        'offset': [ignore_missing, int_validator],
+        'fields': [ignore_missing, list_of_strings_or_string],
+        'sort': [ignore_missing, list_of_strings_or_string],
+        '__junk': [empty],
+        '__before': [rename('id', 'resource_id')]
+    }
+    return schema
+
