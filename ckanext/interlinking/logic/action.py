@@ -18,7 +18,6 @@ import ckan.logic as logic
 import ckan.plugins.toolkit as toolkit
 import ckan.plugins as p
 import ckanext.interlinking.logic.schema as dsschema
-import ckanext.interlinking.logic.solr_access as solr_access
 import ckanext.interlinking.logic.lucene_access as lucene_access
 
 import uuid
