@@ -18,7 +18,6 @@ import ckan.logic as logic
 import ckan.plugins.toolkit as toolkit
 import ckan.plugins as p
 import ckanext.interlinking.logic.schema as dsschema
-import ckanext.interlinking.logic.solr_access as solr_access
 import ckanext.interlinking.logic.lucene_access as lucene_access
 
 import uuid
@@ -360,6 +359,9 @@ def interlinking_resource_search(context, data_dict):
     
     original_fields = [x['id'] for x in ori_ds.get('fields')]
     interlinking_fields = [x['id'] for x in int_ds.get('fields')]    
+    # Checking if the original and the interlinking resources have common column names apart 
+    #     from '_id. In that case their column names have to be namespaced
+    common_field_names_exist = bool(set(original_fields).intersection(set(interlinking_fields) - set(['_id'])))
     if data_dict.get('fields'):
         for field in _get_list(data_dict.get('fields')):
             if not (field in original_fields or field in interlinking_fields):
@@ -377,9 +379,24 @@ def interlinking_resource_search(context, data_dict):
     create_view_results = _create_view(context, data_dict)
     
     data = {'sql': create_view_results.get('sql'), 'fields_status': create_view_results.get('fields_status')}
-    ds_search_sql = p.toolkit.get_action('datastore_search_sql')(context, data)
+    ds_search_sql = p.toolkit.get_action('datastore_search_sql')(context, data)    
     params_dict = _get_params_dict(data_dict)
     ds_search_sql.update(params_dict)
+    
+    # if after all fields have to be namespaced
+    if common_field_names_exist:
+        temp_fields = ds_search_sql['fields']
+        temp_fields = [_namespace_fields(f, original_fields, orig_res.get('id'), int_res.get('id')) for f in temp_fields]
+        ds_search_sql['fields'] = temp_fields;
+        
+        temp_records = ds_search_sql['records']
+        temp_records = [_namespace_record(r, original_fields, orig_res.get('id'), int_res.get('id')) for r in temp_records]
+        ds_search_sql['records'] = temp_records;
+        
+        temp_column_status = ds_search_sql['fields_status']
+        temp_column_status = {_namespace_simple_field(k, original_fields, orig_res.get('id'), int_res.get('id')): 
+                              temp_column_status[k] for k in temp_column_status}
+        ds_search_sql['fields_status'] = temp_column_status
     return ds_search_sql
 
 
@@ -513,9 +530,7 @@ def interlinking_apply_to_all(context, data_dict):
     interlinked_resource_id = data_dict.get('resource_id')
     int_res = p.toolkit.get_action('resource_show')(context, {'id': interlinked_resource_id})
     
-    pprint.pprint(int_res) 
-    
-    # If the original resource is already interlinked
+    # If the original resource is not yet interlinked
     if not int_res.get('reference_fields'):
         raise p.toolkit.ValidationError('Resource "{0}" is not been interlinked yet. ' \
                         'Thus it cannot be finalized'.format(int_res.get('interlinking_parent_id')))
@@ -528,12 +543,12 @@ def interlinking_apply_to_all(context, data_dict):
     reference_row = p.toolkit.get_action('datastore_search')(context, {
                                        'resource_id': int_res.get('id'), 
                                        'filters': {u'_id': row_id}}).get('records')[0]
-                                       
+                                                                              
     original_value = p.toolkit.get_action('datastore_search')(context, {
                                        'resource_id': int_res.get('interlinking_parent_id'), 
                                        'fields': [original_column_name],
                                        'filters': {u'_id': row_id}}).get('records')[0].get(original_column_name)
-                                                                              
+                                                                                  
     # It will carry all fields which has to be updated except 'int__all_results' which is treated separately
     updatable_fields = [u'int__score', u'int__checked_flag']
     all_result_fields = json.loads(reference_row.get('int__all_results')).get('fields') 
@@ -545,7 +560,6 @@ def interlinking_apply_to_all(context, data_dict):
     for field in updatable_fields:
         reference_values[field] = reference_row.get(field)  
 
-        
     interlinked_value = reference_values[interlinked_column_name]
             
     STEP = 100
@@ -765,7 +779,6 @@ def _create_view(context, data_dict):
     fields_status = {}
     interlinking_field_count = 0
     original_interlinked = None
-    #pprint.pprint(field_tupples)
     for field_tuple in field_tupples:
         if field_tuple[1] == orig_resource:
             fields_status[field_tuple[0]] = 'original'
@@ -789,11 +802,7 @@ def _create_view(context, data_dict):
     offset = data_dict.get('offset', 0)
     
     combined_fields = original_fields + list(set(interlinking_fields) - set (original_fields))
-    sort = _sort(context, data_dict, combined_fields)
-    print '---------------SORT-----------------'
-    pprint.pprint(sort)
-    print '---------------SORT-----------------'
-    
+    sort = _sort(context, data_dict, combined_fields)    
     sql_string = u'''SELECT {fields}, \
                     COUNT (*) OVER () AS "_full_count" \
                     FROM "{orig_resource}" \
@@ -871,9 +880,11 @@ def _sort(context, data_dict, field_ids):
         clause = clause.encode('utf-8')
         clause_parts = shlex.split(clause)
         if len(clause_parts) == 1:
-            field, sort = clause_parts[0], 'asc'
+            table, field, sort = '', clause_parts[0], 'asc'
         elif len(clause_parts) == 2:
-            field, sort = clause_parts
+            table, field, sort = '', clause_parts[0], clause_parts[1]
+        elif len(clause_parts) == 3:
+            table, field, sort = clause_parts
         else:
             raise ValidationError({
                 'sort': ['not valid syntax for sort clause']
@@ -889,9 +900,14 @@ def _sort(context, data_dict, field_ids):
             raise ValidationError({
                 'sort': ['sorting can only be asc or desc']
             })
-        clause_parsed.append(u'"{0}" {1}'.format(
-            field, sort)
-        )
+        if table != '':
+            clause_parsed.append(u'"{0}"."{1}" {2}'.format(
+                table, field, sort)
+            )
+        else:
+            clause_parsed.append(u'"{0}" {1}'.format(
+                field, sort)
+            )
 
     if clause_parsed:
         return "order by " + ", ".join(clause_parsed)
@@ -901,3 +917,40 @@ def _strip(input):
     if isinstance(input, basestring) and len(input) and input[0] == input[-1]:
         return input.strip().strip('"')
     return input
+
+
+def _namespace_record (record_dict, original_fields, original_resource_id, interlinking_resource_id):
+    return {_namespace_simple_field(k, original_fields, original_resource_id, interlinking_resource_id): record_dict[k]
+            for k in record_dict}
+    
+
+def _namespace_fields (field_dict, original_fields, original_resource_id, interlinking_resource_id):
+    return {'id': _namespace_simple_field(field_dict['id'], original_fields, original_resource_id, interlinking_resource_id),
+                'type': field_dict['type']}
+    
+    
+def _namespace_simple_field (field_id, original_fields, original_resource_id, interlinking_resource_id):
+    if field_id in original_fields:
+        table_id = original_resource_id
+    else:
+        table_id = interlinking_resource_id
+    return table_id + '.' + field_id
+
+
+"""
+def _namespace_record (record_dict, original_fields, original_resource_id, interlinking_resource_id):
+    return {_namespace_simple_field(k, original_fields, original_resource_id, interlinking_resource_id): (record_dict[k]
+            if k != 'int__all_results' else _namespace_field__int_all_results(record_dict[k], interlinking_resource_id))
+            for k in record_dict}
+    
+def _namespace_field__int_all_results(int_all_results_str, interlinking_resource_id):
+    int_all_results = json.loads(int_all_results_str)
+    fields = int_all_results.get('fields')
+    records = int_all_results.get('records')
+    fields = [interlinking_resource_id + '.' + f if f != 'scoreField' else f for f in fields]
+    records = [_namespace_record__int_all_results(r, interlinking_resource_id) for r in records]
+    return json.dumps({'fields': fields, 'records': records})
+
+def _namespace_record__int_all_results(rec, interlinking_resource_id):
+    return {(interlinking_resource_id + '.' + k if k != 'scoreField' else k): rec[k] for k in rec}
+"""

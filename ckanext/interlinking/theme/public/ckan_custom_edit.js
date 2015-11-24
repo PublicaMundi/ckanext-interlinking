@@ -46,7 +46,6 @@ if (isNodeModule) {
       *  b)If the field refers to the temp_interl resource it has to be renamed properly   
       */
           
-     var originalQuery;
      var interlinkedSortQueryPart;
      // This variable determines if the original resource enforces order (true) or 
      //   the temp_interlinking one (false) 
@@ -57,8 +56,13 @@ if (isNodeModule) {
     	 var sort_field = sort_query_part[0];
     	 var sort_direction = sort_query_part[1];
     	 
-         interlinkedSortQueryPart = '_id ' + sort_direction;
-         originalQuery = actualQuery;
+    	 if(sort_field == '_id' || !interlinking_utility.int_state['fields_namespaced'])
+    		 interlinkedSortQueryPart =  sort_field + ' ' + sort_direction;
+    	else 
+    		 interlinkedSortQueryPart =  sort_field.split('.')[0] + ' ' + sort_field.split('.')[1] + ' ' + sort_direction;
+    		 
+         actualQuery.sort = interlinkedSortQueryPart
+         console.log(actualQuery)
 
      }
     this.action('interlinking_resource_search', actualQuery, function(err, results) {
@@ -66,20 +70,13 @@ if (isNodeModule) {
         cb(err);
         return;
       }
-      /*
-      var interlinkingQuery = {
-          limit: actualQuery.limit,
-          offset: actualQuery.offset,
-          //sort: actualQuery.sort,
-          sort: interlinkedSortQueryPart,
-          resource_id: queryObj.interlinking_resource,
-          interlinked_column: queryObj.interlinked_column,
-      }
-	  */
+
       interlinking_utility.int_state['fields_status'] = results.result.fields_status;
       interlinking_utility.int_state['reference_fields'] = interlinking_utility.int_state['reference_fields'] || []
       int_helper.show_resource(queryObj.interlinking_resource, function(response){
 	      if (response){
+	    	  interlinking_utility.int_state['original_resource_id'] = response.responseJSON.result.interlinking_parent_id;
+	    	  interlinking_utility.int_state['interlinking_resource_id'] = response.responseJSON.result.id;
 	          var columns= {};
 	          try{
 	              columns = JSON.parse(response.responseJSON.result.interlinking_columns_status);
@@ -98,11 +95,25 @@ if (isNodeModule) {
 	                field.type = field.type in my.ckan2JsonTableSchemaTypes ? my.ckan2JsonTableSchemaTypes[field.type] : field.type;
 	                return field;
 	              });
-	              
 	              var new_fields = [];
 	              var records = [];
+	              
+	              interlinking_utility.int_state['fields_namespaced'] = false;
+	              // Checking the first field is namespaced. Then all fields are considered namespaced         
+	              if (fields[0]['id'].split('.').length > 1 && 
+	            		  fields[0]['id'].split('.')[0] ==  interlinking_utility.int_state['original_resource_id'] &&
+	            		  fields[0]['id'].split('.')[1] == '_id')
+	            	  interlinking_utility.int_state['fields_namespaced'] = true;
+	              if (interlinking_utility.int_state['fields_namespaced'] && 
+	            		  typeof response.responseJSON.result.reference_fields != 'undefined'){
+	            	  interlinking_utility.int_state['reference_fields'] = _.map(_.pluck(JSON.parse(response.responseJSON.result.reference_fields),'id'), 
+	            			  function (id){return interlinking_utility.int_state['interlinking_resource_id'] + '.' + id});
+	              }
 	              fields.forEach(function(fld, idx1){
 	            	  var new_fld = {'id': fld.id, 'type': fld.type}
+	            	  if (interlinking_utility.int_state['fields_namespaced']){
+	            		  new_fld['label'] = fld.id.split('.')[1];
+	            	  }
 	            	  
 	            	  if (interlinking_utility.int_state['reference_fields'].indexOf(fld.id) > -1){
 	            		  interlinked_column_found = true;
@@ -110,7 +121,10 @@ if (isNodeModule) {
 	            		  	  case 0:
 	            		  		  // Flag declaring that it hosts interlinking results
 	            		  		  new_fld['hostsInterlinkingResult'] = true;
-	            		  		  interlinking_utility.int_state['interlinking_temp_column'] = fld.id;
+	            		  		  if (interlinking_utility.int_state['fields_namespaced'])
+	            		  			  interlinking_utility.int_state['interlinking_temp_column'] = fld.id.split('.')[1];
+	            		  		  else
+	            		  			  interlinking_utility.int_state['interlinking_temp_column'] = fld.id;
 	            		  		  break;
 	            		  	  case 1:
 	            		  		  new_fld['label'] = 'score';
@@ -137,7 +151,6 @@ if (isNodeModule) {
 	            	  
 	            	  new_fields.push(new_fld);
 	              });
-	              
 	              var out = {
 	        		            total: results.result.total,
 	        		            fields: new_fields,
@@ -149,6 +162,7 @@ if (isNodeModule) {
 	          }catch(err) {
 	        	   console.error(err)
 	          }
+	          
 	      }
 	  });
 
@@ -182,33 +196,23 @@ if (isNodeModule) {
     			interlinking_utility.int_state['fields_status'][key] == 'interlinking_check_flag' ||
     			interlinking_utility.int_state['fields_status'][key] == 'interlinking_all_results' ||
     			interlinking_utility.int_state['fields_status'][key] == 'reference_auxiliary'){
-    		datastore_field_names.push(key)
-    	}
-    	
-    	
-    	if (interlinking_utility.int_state['fields_status'][key] == 'original'){
-    		original_fields.push(key);
-    	}else if (interlinking_utility.int_state['fields_status'][key] == 'orignal_interlinked'){
-    		interlinked_column = key;
-    	}else if (interlinking_utility.int_state['fields_status'][key] == 'interlinking_result'){
-    		interlinking_column = key;
-    	}else if (interlinking_utility.int_state['fields_status'][key] == 'interlinking_score'){
-    		score_column = key;
-    	}else if (interlinking_utility.int_state['fields_status'][key] == 'interlinking_check_flag'){
-    		checked_column = key;
-    	}else if (interlinking_utility.int_state['fields_status'][key] == 'interlinking_all_results'){
-    		results_column = key;
-    	}else if (interlinking_utility.int_state['fields_status'][key] == 'reference_auxiliary'){
-    		auxiliary_fields.push(key);
+    		datastore_field_names.push(key);
     	}
     }
 
     updates.forEach(function(upd, idx){  	
     	var it = {};
-    	it['_id'] = upd['_id'];
     	
-    	for (var dfn in datastore_field_names){
-    		it[datastore_field_names[dfn]] = upd[datastore_field_names[dfn]];
+    	if (interlinking_utility.int_state['fields_namespaced']){
+    		it['_id'] = upd[interlinking_utility.int_state['original_resource_id'] + '._id'];
+        	for (var dfn in datastore_field_names){
+    			it[datastore_field_names[dfn].split('.')[1]] = upd[datastore_field_names[dfn]];
+        	}
+    	} else {
+    		it['_id'] = upd['_id'];
+    		for (var dfn in datastore_field_names){
+    			it[datastore_field_names[dfn]] = upd[datastore_field_names[dfn]];
+        	}
     	}
     	new_updates.push(it);
     });

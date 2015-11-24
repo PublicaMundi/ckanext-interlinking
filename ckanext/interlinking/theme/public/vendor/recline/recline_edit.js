@@ -1592,7 +1592,6 @@ my.SlickGrid = Backbone.View.extend({
     // To do so these fields are included to the state.hiddenColumns[] array
     var hiddenColumns = []
     
-    
     for(var i=0; i < this.model.fields.length; i++){  
     	if(this.model.fields.at(i).get("hostsAllInterlinkingResults") === true)
     		hiddenColumns.push(this.model.fields.at(i).id);
@@ -1942,7 +1941,11 @@ my.SlickGrid = Backbone.View.extend({
 			 var ul_inner_text = '<li id="usersOption" term="' + hits[i][primaryField] + '"';
 			 ul_inner_text += ' score="' + hits[i][scoreField] + '"';
 			 for (j=0; j < auxInterlinkFields.length; j++){
-				 ul_inner_text += ' ' + auxInterlinkFields[j].toLowerCase() + '="' + hits[i][auxInterlinkFields[j]] + '"';
+				 var fieldname = interlinking_utility.int_state['fields_namespaced'] ? 
+						 interlinking_utility.int_state['interlinking_resource_id'] + '.' + auxInterlinkFields[j] : 
+						 auxInterlinkFields[j];
+
+			     ul_inner_text += ' ' + fieldname.toLowerCase() + '="' + hits[i][auxInterlinkFields[j]] + '"';
 			 }
 			 ul_inner_text += '>'+ hits[i][primaryField] +'</li>';
 			 ul_inner.append(ul_inner_text);
@@ -2074,7 +2077,7 @@ my.SlickGrid = Backbone.View.extend({
 		var scoreFieldId = fields.at(fields.indexOf(selectedField) + 1).id;
 		var checkedFieldId = fields.at(fields.indexOf(selectedField) + 2).id;
 		var resultsFieldId = fields.at(fields.indexOf(selectedField) + 3).id;
-		
+
 		//Get all interlinking auxiliary fields
 		var int_aux_fields = []
 		for (var i=0; i < fields.length; i++){
@@ -2091,8 +2094,11 @@ my.SlickGrid = Backbone.View.extend({
     	if (e.target.id == "termOption"){
     		record.set(intFieldId, $(e.target).attr('term'))
     		record.set(scoreFieldId, $(e.target).attr('score'))
-    		for(var i =0; i< int_aux_fields.length; i++){
-    			record.set(int_aux_fields[i],$(e.target).attr(int_aux_fields[i]));
+    		for(var i = 0; i< int_aux_fields.length; i++){
+    			if (interlinking_utility.int_state['fields_namespaced'])
+    				record.set(int_aux_fields[i],$(e.target).attr(int_aux_fields[i].split('.')[1]));
+    			else
+    				record.set(int_aux_fields[i],$(e.target).attr(int_aux_fields[i]));
     		}
     		record.set(checkedFieldId, true);
     		grid.getData().updateItem(record,row);
@@ -2127,7 +2133,7 @@ my.SlickGrid = Backbone.View.extend({
 		var scoreFieldId = fields.at(fields.indexOf(selectedField) + 1).id;
 		var checkedFieldId = fields.at(fields.indexOf(selectedField) + 2).id;
 		var resultsFieldId = fields.at(fields.indexOf(selectedField) + 3).id;
-		
+
 		var auxFieldIds = []
 		for (var f in interlinking_utility.int_state['fields_status']){
 			if (interlinking_utility.int_state['fields_status'][f] == 'reference_auxiliary')
@@ -2153,7 +2159,10 @@ my.SlickGrid = Backbone.View.extend({
 		    	 for (var f in auxFieldIds){
 		    		 if (auxFieldIds[f].toLowerCase() == name){
 		    			 record.set(auxFieldIds[f], value);
-		    			 resultsFieldRecord[auxFieldIds[f]] = value;
+		    			 if (interlinking_utility.int_state['fields_namespaced']){
+		    				 resultsFieldRecord[auxFieldIds[f].split('.')[1]] = value;
+		    			 }else
+		    				 resultsFieldRecord[auxFieldIds[f]] = value;
 		    			 break;
 		    		 }
 		    	 }
@@ -2181,7 +2190,11 @@ my.SlickGrid = Backbone.View.extend({
       if($(e.target).data('option') === 'interlink-with'){
     	  if (typeof $(e.target).data('reference') !== "undefined") {
     		  reference = $(e.target).data('reference')
-    		  model.trigger('interlink-with', column, reference);
+    		  if (interlinking_utility.int_state['fields_namespaced'])
+    			  col_id = column.id.split('.')[1];
+    		  else
+    			  col_id = column.id
+    		  model.trigger('interlink-with', col_id, reference);
     	  }  
     	  
       }else if($(e.target).data('option') === 'finalize-interlinking'){

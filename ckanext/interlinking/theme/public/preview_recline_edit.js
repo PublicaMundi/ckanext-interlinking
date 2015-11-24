@@ -230,7 +230,7 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
 	    self.initializeDataExplorer(dataset);
 	    
 	    dataset.bind('interlink-with', function(col, reference_resource){
-            var options = {column_id: col.id, reference_resource: reference_resource};
+            var options = {column_id: col, reference_resource: reference_resource};
             self.updateWithConfirmation(dataset, options);
         }); 
 	    
@@ -393,8 +393,8 @@ this.ckan.module('recline_interlink_preview', function (jQuery, _) {
     	
     },
     
-    // TOCHECK: Currently not used. Is it usefull to retain it?
     updateWithConfirmation: function(dataset, options, ld, cb) {
+
             var ld = ld || this._onLoad;
             var cb = cb || this._onCompleteShow;
             this.options.helper = int_helper;
