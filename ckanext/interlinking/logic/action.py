@@ -343,7 +343,7 @@ def interlinking_resource_finalize(context, data_dict):
 def interlinking_resource_search(context, data_dict):
     '''Provides a complete interlinking resource providing fields from both the interlinked resource
     and the interlinking temporary one. It gets as parameters the resource_id and datastore_search filters'''
-    
+        
     schema = context.get('schema', dsschema.interlinking_resource_search_schema())
     data_dict, errors = _validate(data_dict, schema, context)
     if errors:

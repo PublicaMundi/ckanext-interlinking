@@ -80,7 +80,7 @@ class ReclinePreviewInterlinking(p.SingletonPlugin):
         
         mapper.connect(
                        'interlinking_resource_download',
-                       '/dataset/{id}/resource/interlinking/resource/{resource_id}',
+                       '/dataset/{id}/resource/interlinking/{resource_id}',
                        controller = 'ckanext.interlinking.controllers.package:InterlinkingController',
                        action = 'interlinking_resource_download')
         return mapper

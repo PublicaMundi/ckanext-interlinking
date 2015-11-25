@@ -62,8 +62,6 @@ if (isNodeModule) {
     		 interlinkedSortQueryPart =  sort_field.split('.')[0] + ' ' + sort_field.split('.')[1] + ' ' + sort_direction;
     		 
          actualQuery.sort = interlinkedSortQueryPart
-         console.log(actualQuery)
-
      }
     this.action('interlinking_resource_search', actualQuery, function(err, results) {
       if (err) {
