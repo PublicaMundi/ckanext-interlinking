@@ -34,7 +34,7 @@
 {% block pre_primary %}
     {% block resource %}
     <section class="module module-resource">
-      <div class="module-content">
+      <div id="interlinking-module-content" class="module-content">
         <div class="actions">
           {% block resource_actions %}
           <ul>
@@ -49,7 +49,7 @@
         {{ super() }}
         {% endblock %}
 
-        <iframe src="{{ h.url_for(controller='ckanext.interlinking.controllers.package:InterlinkingController', action='resource_datapreview', resource_id=resource_id, id=name_or_id) }}" frameborder="0" width="100%"  data-module="data-viewer">
+        <iframe src="{{ h.url_for(controller='ckanext.interlinking.controllers.package:InterlinkingController', action='resource_datapreview', resource_id=resource_id, id=name_or_id) }}" frameborder="0" width="100%" style="min-height:600px"  data-module="data-viewer">
         <p>{{ _('Your browser does not support iframes.') }}</p>
         </iframe>
     </div>

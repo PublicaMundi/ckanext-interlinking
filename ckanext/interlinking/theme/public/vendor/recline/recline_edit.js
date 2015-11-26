@@ -1844,6 +1844,7 @@ my.SlickGrid = Backbone.View.extend({
     //This function handles clicks on columns which contain interlinking results
     function handleCellClick(e, args){
         e.preventDefault();
+        
         selctedCell = args;
     	var fields = model.fields;
         var fieldID = grid.getColumns()[selctedCell.cell].field;

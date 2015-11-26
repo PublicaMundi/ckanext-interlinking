@@ -409,14 +409,11 @@ def interlinking_get_reference_resources(context, data_dict):
     ref_resources = []
     for raw_ref_resource in raw_ref_resources:
         ref_resource_members = raw_ref_resource.split(':')
-        if len(ref_resource_members) != 5:
+        if len(ref_resource_members) != 2:
             raise p.toolkit.ValidationError('Malformed reference resources')
         ref_resource = {}
         ref_resource['name'] = ref_resource_members[0];
         ref_resource['ref-id'] = ref_resource_members[1];
-        ref_resource['dataset-id'] = ref_resource_members[2]
-        ref_resource['resource-id'] = ref_resource_members[3]
-        ref_resource['column-name'] = ref_resource_members[4]
         ref_resources.append(ref_resource)
     return ref_resources
 
