@@ -1828,6 +1828,38 @@ my.SlickGrid = Backbone.View.extend({
       });
 	      
       $menu.bind('click', updateColumn);
+      
+      $("#termsMenu")
+  		.bind('mouseleave', function (e) {
+  			$("#termsMenu").data("inMatchingTermsMenu", false);
+  			setTimeout(function () {
+  				if(!$("#termsMenu").data("inMatchingTermsMenu") ||
+  						typeof $("#termsMenu").data("inMatchingTermsMenu") == "undefined"){
+  	  				$("#termsMenu").fadeOut(options.fadeSpeed);  	
+  		  			$("#matchingTermsMenu").fadeOut(options.fadeSpeed);
+  	  			}
+  		    }, 100);
+  			
+         })
+	     .bind('mouseenter', function (e) {
+	    	 $("#termsMenu").data("inMatchingTermsMenu", true);
+         });
+      
+      $("#matchingTermsMenu")
+      .bind("mouseenter", function(e){
+    	  $("#termsMenu").data("inMatchingTermsMenu", true);
+      })
+      .bind('mouseleave', function(e){
+    	  $("#termsMenu").data("inMatchingTermsMenu", false);
+    	  $(this).fadeOut(options.fadeSpeed);
+    	  
+    	  setTimeout(function () {
+    		  if(!$("#termsMenu").data('inMatchingTermsMenu')){
+	  				$("#termsMenu").fadeOut(options.fadeSpeed);  	
+	  			}
+		    }, 200);
+      });
+      
     }
     
     function _onCompleteGetInterlinkingReferences(results){
@@ -1905,10 +1937,21 @@ my.SlickGrid = Backbone.View.extend({
 				 
             }, 1000 );
             
-            $("#termsMenu")
-	        	.css("top", e.pageY)
-	        	.css("left", e.pageX)
-	        	.show();
+            console.log($("#termsMenu").height())
+            var critical_difference = 575 - e.pageY - $("#termsMenu").height();
+            if (critical_difference <= 0){
+            	$("#termsMenu")
+		        	.css("top", e.pageY -1 + critical_difference)
+		        	.css("left", e.pageX -1)
+		        	.show();
+            }else{
+	            $("#termsMenu")
+		        	.css("top", e.pageY -1)
+		        	.css("left", e.pageX -1)
+		        	.show();
+            }
+            
+            
                         
         	$("body").click(function(e) {
         	    if (!$(e.target).hasClass("slick-cell")){
@@ -1952,10 +1995,28 @@ my.SlickGrid = Backbone.View.extend({
 			 ul_inner.append(ul_inner_text);
 		 }
     	 if(hits.length > 0){
+    		 var critical_difference = 575 - $("#termsMenu").position().top - $("#matchingTermsMenu").height();
+    		 if (critical_difference <= 0){
+             	console.log('problem')
+             	$("#matchingTermsMenu")
+ 		        	.css("top", $("#termsMenu").offset().top + critical_difference)
+ 		        	.css("left", $("#termsMenu").offset().left + $("#termsMenu").width())
+ 		        	.show();
+             }else{
+             	console.log('ok')
+ 	            $("#matchingTermsMenu")
+ 		        	.css("top", $("#termsMenu").offset().top)
+ 		        	.css("left", $("#termsMenu").offset().left + $("#termsMenu").width())
+ 		        	.show();
+             }
+    		 /*
         	 $("#matchingTermsMenu")
-	        	.css("top", $("#termsMenu").offset().top + $("#termsMenu").height())
-	        	.css("left", $("#termsMenu").offset().left)
+	        	//.css("top", $("#termsMenu").offset().top + $("#termsMenu").height())
+	        	//.css("left", $("#termsMenu").offset().left)
+        	    .css("top", $("#termsMenu").offset().top)
+        	    .css("left", $("#termsMenu").offset().left + $("#termsMenu").width())
 	        	.show();
+	        	*/
     	 }else{
     		 ;//$("#intSearchFld").attr()
     	 }

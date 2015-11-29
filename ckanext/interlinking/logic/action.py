@@ -17,6 +17,8 @@ import ckan.lib.navl.dictization_functions
 import ckan.logic as logic
 import ckan.plugins.toolkit as toolkit
 import ckan.plugins as p
+from ckan.lib.celery_app import celery
+from ckan.model.types import make_uuid
 import ckanext.interlinking.logic.schema as dsschema
 import ckanext.interlinking.logic.lucene_access as lucene_access
 
@@ -220,8 +222,8 @@ def interlinking_resource_finalize(context, data_dict):
     original_file_name = original_url_splitted[ len(original_url_splitted)-1 ]
     
     on_interlinking_process = res.get('on_interlinking_process')
-    #if not on_interlinking_process or on_interlinking_process == False:
-    #    raise p.toolkit.ValidationError('Resource "{0}" is not currently being interlinked resource'.format(res.get('id')))
+    if not on_interlinking_process or on_interlinking_process == False:
+        raise p.toolkit.ValidationError('Resource "{0}" is not currently being interlinked resource'.format(res.get('id')))
     
     interlinking_columns_status = json.loads(int_res.get('interlinking_columns_status'))
     for i in interlinking_columns_status:
@@ -229,8 +231,8 @@ def interlinking_resource_finalize(context, data_dict):
             interlinked_column = i
             interlinking_reference  = interlinking_columns_status[i]
             
-    #if not interlinked_column:
-    #    raise p.toolkit.ValidationError('Resource "{0}" does not have an interlinked column'.format(res.get('id')))
+    if not interlinked_column:
+        raise p.toolkit.ValidationError('Resource "{0}" does not have an interlinked column'.format(res.get('id')))
     
     original_name = res.get('name')
     
@@ -329,7 +331,7 @@ def interlinking_resource_finalize(context, data_dict):
                     })
     # The intermediate interlinking resource is deleted along with its datastore table, and the original resource 
     # is marked as not being currently interlinked.   
-    p.toolkit.get_action('interlinking_resource_delete')(context, {'resource_id': interlinked_resource_id})
+    #p.toolkit.get_action('interlinking_resource_delete')(context, {'resource_id': interlinked_resource_id})
     return {'interlinked_res_id': new_res.get('id')}
 
 
