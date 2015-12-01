@@ -1,18 +1,19 @@
-# Translations template for ckanext-interlinking.
+# French translations for ckanext-interlinking.
 # Copyright (C) 2015 ORGANIZATION
-# This file is distributed under the same license as the ckanext-interlinking
+# This file is distributed under the same license as the
+# ckanext-interlinking
 # project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2015.
 #
-#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-interlinking 0.1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2015-12-01 22:05+0200\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: 2015-12-01 22:10+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language-Team: fr <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n > 1)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -89,9 +90,9 @@ msgstr ""
 
 #: ckanext/interlinking/theme/public/preview_recline_edit.js:17
 msgid ""
-"Finalizing the interlinking process means that a new interlinked version of "
-"the original resource will be created. Are you sure you want to finalize "
-"interlinking for this column?"
+"Finalizing the interlinking process means that a new interlinked version "
+"of the original resource will be created. Are you sure you want to "
+"finalize interlinking for this column?"
 msgstr ""
 
 #: ckanext/interlinking/theme/public/preview_recline_edit.js:18

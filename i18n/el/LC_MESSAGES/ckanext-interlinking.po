@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: ckanext-interlinking 0.1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-11-05 15:20+0200\n"
+"POT-Creation-Date: 2015-12-01 22:05+0200\n"
 "PO-Revision-Date: 2015-11-05 15:21+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: el <LL@li.org>\n"
@@ -23,12 +23,12 @@ msgstr ""
 #: ckanext/interlinking/controllers/package.py:68
 #: ckanext/interlinking/controllers/package.py:91
 msgid "Resource not found"
-msgstr ""
+msgstr "Ο πόρος δεν βρέθηκε"
 
 #: ckanext/interlinking/controllers/package.py:47
 #, python-format
 msgid "Unauthorized to read resource %s"
-msgstr ""
+msgstr "Δεν έχετε εχουσιοδότητη να δείτε τον πόρο %s"
 
 #: ckanext/interlinking/controllers/package.py:81
 msgid "Package not found"
@@ -37,20 +37,20 @@ msgstr "Το σύνολο δεδομένων δεν βρέθηκε"
 #: ckanext/interlinking/controllers/package.py:83
 #: ckanext/interlinking/controllers/package.py:93
 msgid "Not authorized to see this page"
-msgstr ""
+msgstr "Δεν έχετε εξουσιοδότηση να δείτε τη σελίδα"
 
 #: ckanext/interlinking/logic/auth.py:15
 msgid "User {0} not authorized to update resource {1}"
-msgstr ""
+msgstr "Ο χρήστης {0} δεν είναι εξουσιοδοτημένος να ενημερώσει τον πόρο {1}"
 
 #: ckanext/interlinking/theme/public/check_status.js:7
 #: ckanext/interlinking/theme/public/preview_recline_edit.js:12
 msgid "Please Confirm Action"
-msgstr ""
+msgstr "Παρακαλώ Eπιβεβαιώστε την Eνέργεια"
 
 #: ckanext/interlinking/theme/public/check_status.js:8
 msgid "Confirm"
-msgstr ""
+msgstr "Επιβεβαίωση"
 
 #: ckanext/interlinking/theme/public/check_status.js:9
 msgid "Do you want to create new translation?"
@@ -68,129 +68,179 @@ msgstr ""
 
 #: ckanext/interlinking/theme/public/check_status.js:12
 msgid "Cancel"
-msgstr ""
+msgstr "Ακύρωση"
 
 #: ckanext/interlinking/theme/public/preview_recline_edit.js:13
 msgid "Please Note"
-msgstr ""
+msgstr "Παρακαλώ προσέξτε"
 
 #: ckanext/interlinking/theme/public/preview_recline_edit.js:14
 msgid ""
 "Datastore is disabled. Please enable datastore and try again in order to "
 "proceed with resource interlinking"
 msgstr ""
+"Το DataStore είναι απενεργοποιημένο. Παρακαλώ ενεργοποιήστε το και "
+"προσπαθήστε ξανά ούτως ώστε να \"\n"
+"\"προσωρήσετε με τη διασύνδεση του πόρου"
 
 #: ckanext/interlinking/theme/public/preview_recline_edit.js:15
-msgid ""
-"Are you sure you want to restore this column to its status before "
-"interlinking take place?"
-msgstr "Είστε σίγουρος ότι θέλετε να επαναφέρετε αυτή την στήλη στην κατάσταση που ήταν πριν λάβει χώρα η διασύνδεση;"
+#, fuzzy
+#| msgid "Are you sure you want to restart interlinking on this column?"
+msgid "Are you sure you want to abort interlinking for this resource?"
+msgstr ""
+"Είστε σίγουρος ότι θέλετε να επανεκκινήσετε τη διασύνδεση για αυτή τη "
+"στήλη;"
 
 #: ckanext/interlinking/theme/public/preview_recline_edit.js:16
-msgid "Are you sure you want to update existing column interlinking?"
+msgid "Are you sure you want to restart interlinking on this column?"
 msgstr ""
+"Είστε σίγουρος ότι θέλετε να επανεκκινήσετε τη διασύνδεση για αυτή τη "
+"στήλη;"
 
 #: ckanext/interlinking/theme/public/preview_recline_edit.js:17
-msgid "Are you sure you want to restart interlinking on this column?"
-msgstr "Είστε σίγουρος ότι θέλετε να επανεκκινήσετε τη διασύνδεση για αυτή τη στήλη;"
+#, fuzzy
+#| msgid "" "Finalizing the interlinking process for a column means that its
+#| contents " "will be update accordingly. Are you sure you want to finalize "
+#| "interlinking for this column?"
+msgid ""
+"Finalizing the interlinking process means that a new interlinked version "
+"of the original resource will be created. Are you sure you want to "
+"finalize interlinking for this column?"
+msgstr ""
+" Η οριστικοποίηση της διαδικασία διασύνδεσης μιας στήλης συνεπάγεται ότι "
+"τα περιεχόμενά της \"\n"
+"\"θα ενημερωθούν αναλόγως. Είστε σίγουρος ότι θέλετε να οριστικοποιήσετε "
+"\"\n"
+"\"τη διασύνδεση αυτής της στήλης;"
 
 #: ckanext/interlinking/theme/public/preview_recline_edit.js:18
-msgid ""
-"Finalizing the interlinking process for a column means that its contents "
-"will be update accordingly. Are you sure you want to finalize "
-"interlinking for this column?"
-msgstr ""
-"Οριστικοποιώντας τη διαδικασία διασύνδεσης"
+msgid "Are you sure you wish to set the value for field \""
+msgstr "είστε σίγουρος ότι επιθυμείτε να θέσετε την τιμή του πεδίου \""
 
 #: ckanext/interlinking/theme/public/preview_recline_edit.js:19
-msgid "Could not load preview"
-msgstr ""
+msgid "\" equal to \""
+msgstr "\" ίση με \""
 
 #: ckanext/interlinking/theme/public/preview_recline_edit.js:20
-msgid "DataProxy returned an error"
-msgstr ""
+msgid "\" for all rows where field \""
+msgstr "\" για όλες τις εγγραφές όπου το πεδίο \""
 
 #: ckanext/interlinking/theme/public/preview_recline_edit.js:21
-msgid "DataStore returned an error"
-msgstr ""
+msgid "\" is equal to \""
+msgstr "\" είναι ίσο με \""
 
 #: ckanext/interlinking/theme/public/preview_recline_edit.js:22
-msgid "Interlink with"
-msgstr "Διασύνδεση με"
+msgid "\" ?"
+msgstr "\" ;"
 
 #: ckanext/interlinking/theme/public/preview_recline_edit.js:23
-msgid "Choices"
-msgstr "Επιλογές"
+msgid "Could not load preview"
+msgstr "Η προεπισκόπηση είναι αδύνατο να φορτωθεί"
 
 #: ckanext/interlinking/theme/public/preview_recline_edit.js:24
-msgid "Search for anoter matching term"
-msgstr "Αναζήτηση άλλου όρου"
+msgid "DataProxy returned an error"
+msgstr "Το DataProxy επέστρεψε ένα σφάλμα"
 
 #: ckanext/interlinking/theme/public/preview_recline_edit.js:25
-msgid "Interlinking process for this resource cannot be yet finalized. Field '"
-msgstr "Η διαδικασία διασύνδεσεσης δεν μπορει να προχωρήσει για αυτόν τον πόρο. Το πεδίο '"
+msgid "DataStore returned an error"
+msgstr "Το DataStore επέστρεψε ένα σφάλμα"
 
 #: ckanext/interlinking/theme/public/preview_recline_edit.js:26
-msgid "' has some remaining blank cells"
-msgstr "' έχει κάποια ασυμπλήρωτα κενά"
+msgid "Interlink with:"
+msgstr "Διασύνδεση με:"
 
 #: ckanext/interlinking/theme/public/preview_recline_edit.js:27
+msgid "Choices:"
+msgstr "Επιλογές:"
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:28
+msgid "Search for another matching term:"
+msgstr "Αναζήτηση άλλου σχετικού όρου:"
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:29
+msgid "Type at least 3 characters..."
+msgstr "Πληκτρολογήστε τουλάχιστον 3 χαρακτήρες..."
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:30
+msgid "Use selected value for all matching cells"
+msgstr "Χρήση της επιλεγμένης τιμής για όλα τα όμοια κελιά"
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:31
+msgid "Interlinking process for this resource cannot be yet finalized. Field '"
+msgstr ""
+"Η διαδικασία διασύνδεσεσης δεν μπορει να προχωρήσει για αυτόν τον πόρο. "
+"Το πεδίο '"
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:32
+#, fuzzy
+#| msgid "' has some remaining blank cells"
+msgid "' has some remaining blank cells."
+msgstr "' έχει κάποια ασυμπλήρωτα κενά"
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:33
+#, fuzzy
+#| msgid "Interlinking process for this resource cannot be yet finalized. Field
+#| '"
+msgid ""
+"Interlinking for this resource has not yet started and thus it cannot be "
+"finalized."
+msgstr ""
+"Η διαδικασία διασύνδεσεσης δεν μπορει να προχωρήσει για αυτόν τον πόρο. "
+"Το πεδίο '"
+
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:34
 msgid "Ok"
 msgstr "Οκ"
 
-#: ckanext/interlinking/theme/public/preview_recline_edit.js:28
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:35
 msgid "Preview not available for data type: "
-msgstr ""
+msgstr "Δεν ειναι διαθέσιμη η προεπισκόπηση για τον τύπο δεδομένων: "
 
-#: ckanext/interlinking/theme/public/preview_recline_edit.js:102
-#: ckanext/interlinking/theme/public/preview_recline_edit.js:213
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:120
+#: ckanext/interlinking/theme/public/preview_recline_edit.js:227
 msgid "error loading preview"
-msgstr ""
+msgstr "Σφάλμα κατά τη φόρτωση της προεπισκόπησης"
 
 #: ckanext/interlinking/theme/templates/recline_interlink.html:8
 msgid "Finalize interlinking"
-msgstr ""
+msgstr "Οριστικοποίηση της διασύνδεσης"
 
 #: ckanext/interlinking/theme/templates/recline_interlink.html:9
 msgid "Abort interlinking"
-msgstr ""
+msgstr "Ακύρωση της διασύνδεσης"
 
 #: ckanext/interlinking/theme/templates/recline_interlink.html:16
-msgid "Save"
-msgstr ""
+msgid "Finalize"
+msgstr "Οριστικοποίηση"
 
 #: ckanext/interlinking/theme/templates/recline_interlink.html:17
-msgid "Finalize"
-msgstr ""
-
-#: ckanext/interlinking/theme/templates/recline_interlink.html:18
 msgid "Abort"
-msgstr ""
+msgstr "Ακύρωση"
 
-#: ckanext/interlinking/theme/templates/recline_interlink.html:25
+#: ckanext/interlinking/theme/templates/recline_interlink.html:24
 msgid "Loading..."
 msgstr "Φόρτωση..."
 
 #: ckanext/interlinking/theme/templates/package/resource_edit.html:10
 msgid "Interlink"
-msgstr ""
+msgstr "Διασύνδεση"
 
 #: ckanext/interlinking/theme/templates/package/resource_interlink.html:15
 msgid "Organizations"
-msgstr ""
+msgstr "Οργανισμοί"
 
 #: ckanext/interlinking/theme/templates/package/resource_interlink.html:19
 msgid "Interlinking"
-msgstr ""
+msgstr "Διασύνδεση"
 
 #: ckanext/interlinking/theme/templates/package/resource_interlink.html:21
 #: ckanext/interlinking/theme/templates/package/resource_interlink.html:24
 msgid "Datasets"
-msgstr ""
+msgstr "Σύνολα δεδομένων"
 
 #: ckanext/interlinking/theme/templates/package/resource_interlink.html:25
 msgid "Create Dataset"
-msgstr ""
+msgstr "Δημιουργία Συνόλου Δεδομένων"
 
 #: ckanext/interlinking/theme/templates/package/resource_interlink.html:32
 msgid "Interlinking resource"
@@ -198,13 +248,12 @@ msgstr "Διασύνδεση πόρου"
 
 #: ckanext/interlinking/theme/templates/package/resource_interlink.html:42
 msgid "View resource"
-msgstr ""
+msgstr "Προβολή πόρου"
 
 #: ckanext/interlinking/theme/templates/package/resource_interlink.html:43
 msgid "Edit"
-msgstr ""
+msgstr "Επεξεργασία"
 
 #: ckanext/interlinking/theme/templates/package/resource_interlink.html:53
 msgid "Your browser does not support iframes."
-msgstr ""
-
+msgstr "Ο φυλλομετρητής σας δεν υποστηρίζει iframes"
