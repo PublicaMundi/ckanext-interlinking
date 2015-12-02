@@ -52,7 +52,10 @@ This type of query is essentially a wildcard asterisk (*) search where the aster
 ```<term>``` and ```<reference>``` have the same significance as in stemmed term search query.
 
 ## Configuration file settings for ckanext-interlinking
-The configuration file needs two configuration settings for ckanext-interlinking:
+
+First, add `recline_interlinking` to the list of enabled CKAN plugins (`ckan.plugins`). 
+
+The plugin needs two configuration settings:
 
 ```conf
 # ckanext-interlinking reference resources
