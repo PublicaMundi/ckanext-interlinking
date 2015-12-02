@@ -4,14 +4,16 @@
 {{ super() }}
 {% block interlinking_item_explore %}
 
+{% if res.datastore_active %}
 {% if h.check_access('package_update', {'id':pkg.id })  %}
 <a class="btn btn-primary" href="{{h.url_for('resource_interlink', id=pkg.id, resource_id=res.id)}}">
       <i class="icon-exchange"></i>
       {{ _('Interlink') }}
     </a>
-      {% endif %}
-  {% endblock %}
+{% endif %}
+{% endif %}
 
-  {% endblock %}
+{% endblock %}
+{% endblock %}
 
   
